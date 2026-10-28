@@ -12,13 +12,13 @@ namespace AutoSolid.AddIn
 {
     [ComVisible(true)]
     [Guid("89B64123-5640-4718-8C23-676EFF5B66F3")]
-    [DisplayName("AutoSolid")]
-    [Description("Gerador de Bibliotecas Paramétricas de Peças via Inteligência Artificial")]
+    [DisplayName("BiblioteCad")]
+    [Description("Gerador Inteligente de Bibliotecas Paramétricas CAD 3D")]
     public class SwAddin : ISwAddin
     {
         public const string ADDIN_GUID = "89B64123-5640-4718-8C23-676EFF5B66F3";
-        public const string ADDIN_TITLE = "AutoSolid";
-        public const string ADDIN_DESCRIPTION = "Automação paramétrica de bibliotecas com IA multimodal";
+        public const string ADDIN_TITLE = "BiblioteCad";
+        public const string ADDIN_DESCRIPTION = "Automação paramétrica de bibliotecas CAD 3D com IA multimodal";
 
         private SldWorks _swApp;
         private int _addinCookie;
@@ -35,7 +35,7 @@ namespace AutoSolid.AddIn
             // Define o callback do Add-In
             bool callbackOk = _swApp.SetAddinCallbackInfo2(0, this, _addinCookie);
 
-            // Cria o Taskpane do SolidWorks
+            // Cria o Taskpane do SolidWorks com a logo oficial
             CreateTaskpane();
 
             return true;
@@ -54,13 +54,29 @@ namespace AutoSolid.AddIn
 
         #region Taskpane Management
 
+        private static string GetTaskpaneBitmapPath()
+        {
+            try
+            {
+                string dllDir = Path.GetDirectoryName(typeof(SwAddin).Assembly.Location);
+                if (!string.IsNullOrEmpty(dllDir))
+                {
+                    string candidate = Path.Combine(dllDir, "Assets", "BiblioteCadTaskpane20.bmp");
+                    if (File.Exists(candidate))
+                    {
+                        return candidate;
+                    }
+                }
+            }
+            catch { }
+            return string.Empty;
+        }
+
         private void CreateTaskpane()
         {
             try
             {
-                // Se desejar um ícone personalizado, passe o caminho de um bitmap 16x16 ou 20x20.
-                // Passar string vazia usa o ícone padrão do SolidWorks.
-                string iconPath = string.Empty;
+                string iconPath = GetTaskpaneBitmapPath();
 
                 _taskpaneView = _swApp.CreateTaskpaneView2(iconPath, ADDIN_TITLE);
                 if (_taskpaneView != null)
@@ -74,7 +90,7 @@ namespace AutoSolid.AddIn
             }
             catch (Exception ex)
             {
-                _swApp?.SendMsgToUser2("Falha ao inicializar Taskpane do AutoSolid: " + ex.Message,
+                _swApp?.SendMsgToUser2("Falha ao inicializar Taskpane do BiblioteCad: " + ex.Message,
                     (int)swMessageBoxIcon_e.swMbWarning, (int)swMessageBoxBtn_e.swMbOk);
             }
         }
@@ -108,26 +124,29 @@ namespace AutoSolid.AddIn
         {
             try
             {
-                // Registra o Add-In no registro do SolidWorks para carregamento automático
                 string keyPath = $@"SOFTWARE\SolidWorks\Addins\{{{ADDIN_GUID}}}";
+                string iconPath = GetTaskpaneBitmapPath();
 
                 using (RegistryKey rk = Registry.LocalMachine.CreateSubKey(keyPath))
                 {
                     if (rk != null)
                     {
-                        rk.SetValue(null, 0); // Default value
+                        rk.SetValue(null, 0);
                         rk.SetValue("Description", ADDIN_DESCRIPTION);
                         rk.SetValue("Title", ADDIN_TITLE);
+                        if (!string.IsNullOrEmpty(iconPath))
+                        {
+                            rk.SetValue("Icon Path", iconPath);
+                        }
                     }
                 }
 
-                // Chave de ativação na inicialização sob Current User
                 string loadKeyPath = $@"Software\SolidWorks\AddInsStartup\{{{ADDIN_GUID}}}";
                 using (RegistryKey rk = Registry.CurrentUser.CreateSubKey(loadKeyPath))
                 {
                     if (rk != null)
                     {
-                        rk.SetValue(null, 1, RegistryValueKind.DWord); // 1 = Carregar na inicialização
+                        rk.SetValue(null, 1, RegistryValueKind.DWord);
                     }
                 }
             }

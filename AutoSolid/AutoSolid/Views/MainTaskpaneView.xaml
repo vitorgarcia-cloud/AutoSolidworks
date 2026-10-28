@@ -6,51 +6,228 @@
              xmlns:local="clr-namespace:AutoSolid.Views"
              xmlns:vm="clr-namespace:AutoSolid.ViewModels"
              mc:Ignorable="d" 
-             d:DesignHeight="850" d:DesignWidth="420"
-             Background="#ECECEC"
-             FontFamily="Segoe UI" FontSize="11.5" Foreground="#222222">
+             d:DesignHeight="860" d:DesignWidth="430"
+             Background="{DynamicResource SwAppBgBrush}"
+             FontFamily="Segoe UI" FontSize="11.5" Foreground="{DynamicResource SwTextDarkBrush}">
 
     <UserControl.Resources>
         <BooleanToVisibilityConverter x:Key="BoolToVisConverter"/>
 
-        <!-- Paleta Nativa SolidWorks (PropertyManager / Taskpane CAD) -->
-        <SolidColorBrush x:Key="SwBlueBrush" Color="#005A9E"/>
-        <SolidColorBrush x:Key="SwBlueHoverBrush" Color="#004578"/>
-        <SolidColorBrush x:Key="SwBlueLightBgBrush" Color="#E5F1FB"/>
-        <SolidColorBrush x:Key="SwBlueBorderBrush" Color="#0078D7"/>
-        <SolidColorBrush x:Key="SwGreenBrush" Color="#107C41"/>
-        <SolidColorBrush x:Key="SwGreenHoverBrush" Color="#0C5E31"/>
-        <SolidColorBrush x:Key="SwDangerBrush" Color="#C42B1C"/>
-        <SolidColorBrush x:Key="SwPanelBgBrush" Color="#F7F7F7"/>
-        <SolidColorBrush x:Key="SwGroupHeaderBgBrush" Color="#DDE1E5"/>
-        <SolidColorBrush x:Key="SwBorderBrush" Color="#C2C4C6"/>
-        <SolidColorBrush x:Key="SwInputBorderBrush" Color="#ABADB3"/>
-        <SolidColorBrush x:Key="SwTextDarkBrush" Color="#1E1E1E"/>
-        <SolidColorBrush x:Key="SwTextMutedBrush" Color="#55585C"/>
+        <!-- ========================================================================= -->
+        <!-- PALETA DINÂMICA SOLIDWORKS VERMELHA (MODO ESCURO & MODO CLARO)            -->
+        <!-- ========================================================================= -->
+        <SolidColorBrush x:Key="SwAppBgBrush" Color="#363636"/>
+        <SolidColorBrush x:Key="SwHeaderBgBrush" Color="#2C2C2C"/>
+        <SolidColorBrush x:Key="SwHeaderBorderBrush" Color="#505050"/>
+        <SolidColorBrush x:Key="SwSurfaceBgBrush" Color="#3E3E3E"/>
+        <SolidColorBrush x:Key="SwPanelBgBrush" Color="#454545"/>
+        <SolidColorBrush x:Key="SwGroupHeaderBgBrush" Color="#333333"/>
+        <SolidColorBrush x:Key="SwBorderBrush" Color="#585858"/>
+        <SolidColorBrush x:Key="SwInputBgBrush" Color="#2A2A2A"/>
+        <SolidColorBrush x:Key="SwInputReadOnlyBgBrush" Color="#343434"/>
+        <SolidColorBrush x:Key="SwInputBorderBrush" Color="#626262"/>
+        <SolidColorBrush x:Key="SwDropZoneBgBrush" Color="#382F2F"/>
+        <SolidColorBrush x:Key="SwDropZoneBorderBrush" Color="#9E3838"/>
 
-        <!-- Estilo Padrão de TextBox Nativo CAD -->
+        <SolidColorBrush x:Key="SwTextDarkBrush" Color="#F0F0F0"/>
+        <SolidColorBrush x:Key="SwTextMutedBrush" Color="#B5B8BC"/>
+        <SolidColorBrush x:Key="SwTextHighlightBrush" Color="#FF5C5C"/>
+
+        <!-- Vermelho Oficial SolidWorks / BiblioteCad -->
+        <SolidColorBrush x:Key="SwBlueBrush" Color="#C81E1E"/>
+        <SolidColorBrush x:Key="SwBlueHoverBrush" Color="#E02828"/>
+        <SolidColorBrush x:Key="SwBlueLightBgBrush" Color="#4A2020"/>
+        <SolidColorBrush x:Key="SwBlueBorderBrush" Color="#F04444"/>
+
+        <SolidColorBrush x:Key="SwGreenBrush" Color="#168A4A"/>
+        <SolidColorBrush x:Key="SwGreenHoverBrush" Color="#1DA359"/>
+
+        <SolidColorBrush x:Key="SwSecondaryBtnBgBrush" Color="#4E4E4E"/>
+        <SolidColorBrush x:Key="SwSecondaryBtnBorderBrush" Color="#686868"/>
+
+        <SolidColorBrush x:Key="SwDangerBgBrush" Color="#4A2727"/>
+        <SolidColorBrush x:Key="SwDangerBorderBrush" Color="#8A3E3E"/>
+        <SolidColorBrush x:Key="SwDangerTextBrush" Color="#FF9494"/>
+
+        <SolidColorBrush x:Key="SwTabInactiveBgBrush" Color="#2F2F2F"/>
+        <SolidColorBrush x:Key="SwTabInactiveTextBrush" Color="#A6A8AA"/>
+
+        <SolidColorBrush x:Key="SwGridBgBrush" Color="#2A2A2A"/>
+        <SolidColorBrush x:Key="SwGridAltRowBgBrush" Color="#313131"/>
+        <SolidColorBrush x:Key="SwGridHeaderBgBrush" Color="#353535"/>
+        <SolidColorBrush x:Key="SwGridLinesBrush" Color="#474747"/>
+        <SolidColorBrush x:Key="SwGridSelectedBgBrush" Color="#6B1D1D"/>
+        <SolidColorBrush x:Key="SwGridSelectedTextBrush" Color="#FFFFFF"/>
+
+        <SolidColorBrush x:Key="SwBannerBgBrush" Color="#173D28"/>
+        <SolidColorBrush x:Key="SwBannerBorderBrush" Color="#2E8B57"/>
+        <SolidColorBrush x:Key="SwBannerTextBrush" Color="#85EEB1"/>
+        <SolidColorBrush x:Key="SwBadgeBgBrush" Color="#4A1E1E"/>
+
+        <!-- ========================================================================= -->
+        <!-- ESTILOS DE CONTROLES NATIVOS SOLIDWORKS (DARK & LIGHT COMPATÍVEIS)        -->
+        <!-- ========================================================================= -->
+
+        <!-- TextBox CAD -->
         <Style TargetType="TextBox">
-            <Setter Property="BorderBrush" Value="{StaticResource SwInputBorderBrush}"/>
+            <Setter Property="BorderBrush" Value="{DynamicResource SwInputBorderBrush}"/>
             <Setter Property="BorderThickness" Value="1"/>
-            <Setter Property="Background" Value="#FFFFFF"/>
-            <Setter Property="Foreground" Value="#1E1E1E"/>
-            <Setter Property="Padding" Value="5,2"/>
+            <Setter Property="Background" Value="{DynamicResource SwInputBgBrush}"/>
+            <Setter Property="Foreground" Value="{DynamicResource SwTextDarkBrush}"/>
+            <Setter Property="CaretBrush" Value="{DynamicResource SwTextDarkBrush}"/>
+            <Setter Property="Padding" Value="6,3"/>
             <Setter Property="VerticalContentAlignment" Value="Center"/>
-            <Style.Triggers>
-                <Trigger Property="IsMouseOver" Value="True">
-                    <Setter Property="BorderBrush" Value="#0078D7"/>
-                </Trigger>
-                <Trigger Property="IsKeyboardFocused" Value="True">
-                    <Setter Property="BorderBrush" Value="{StaticResource SwBlueBrush}"/>
-                </Trigger>
-            </Style.Triggers>
+            <Setter Property="Template">
+                <Setter.Value>
+                    <ControlTemplate TargetType="TextBox">
+                        <Border x:Name="border"
+                                Background="{TemplateBinding Background}"
+                                BorderBrush="{TemplateBinding BorderBrush}"
+                                BorderThickness="{TemplateBinding BorderThickness}"
+                                CornerRadius="2">
+                            <ScrollViewer x:Name="PART_ContentHost" Focusable="False" HorizontalScrollBarVisibility="Hidden" VerticalScrollBarVisibility="Hidden"/>
+                        </Border>
+                        <ControlTemplate.Triggers>
+                            <Trigger Property="IsMouseOver" Value="True">
+                                <Setter TargetName="border" Property="BorderBrush" Value="{DynamicResource SwBlueBorderBrush}"/>
+                            </Trigger>
+                            <Trigger Property="IsKeyboardFocused" Value="True">
+                                <Setter TargetName="border" Property="BorderBrush" Value="{DynamicResource SwBlueBrush}"/>
+                            </Trigger>
+                        </ControlTemplate.Triggers>
+                    </ControlTemplate>
+                </Setter.Value>
+            </Setter>
         </Style>
 
-        <!-- Botão Primário SolidWorks (Azul CAD) -->
+        <!-- ComboBox Item CAD -->
+        <Style TargetType="ComboBoxItem">
+            <Setter Property="Background" Value="{DynamicResource SwInputBgBrush}"/>
+            <Setter Property="Foreground" Value="{DynamicResource SwTextDarkBrush}"/>
+            <Setter Property="Padding" Value="7,4"/>
+            <Setter Property="BorderThickness" Value="0"/>
+            <Setter Property="Template">
+                <Setter.Value>
+                    <ControlTemplate TargetType="ComboBoxItem">
+                        <Border x:Name="bd" Background="{TemplateBinding Background}" Padding="{TemplateBinding Padding}">
+                            <ContentPresenter/>
+                        </Border>
+                        <ControlTemplate.Triggers>
+                            <Trigger Property="IsHighlighted" Value="True">
+                                <Setter TargetName="bd" Property="Background" Value="{DynamicResource SwGridSelectedBgBrush}"/>
+                                <Setter Property="Foreground" Value="{DynamicResource SwGridSelectedTextBrush}"/>
+                            </Trigger>
+                            <Trigger Property="IsSelected" Value="True">
+                                <Setter TargetName="bd" Property="Background" Value="{DynamicResource SwBlueLightBgBrush}"/>
+                            </Trigger>
+                        </ControlTemplate.Triggers>
+                    </ControlTemplate>
+                </Setter.Value>
+            </Setter>
+        </Style>
+
+        <!-- ComboBox CAD (Suporta IsEditable=False e IsEditable=True no Modo Escuro/Claro) -->
+        <Style TargetType="ComboBox">
+            <Setter Property="Background" Value="{DynamicResource SwInputBgBrush}"/>
+            <Setter Property="Foreground" Value="{DynamicResource SwTextDarkBrush}"/>
+            <Setter Property="BorderBrush" Value="{DynamicResource SwInputBorderBrush}"/>
+            <Setter Property="BorderThickness" Value="1"/>
+            <Setter Property="Padding" Value="6,2"/>
+            <Setter Property="VerticalContentAlignment" Value="Center"/>
+            <Setter Property="Template">
+                <Setter.Value>
+                    <ControlTemplate TargetType="ComboBox">
+                        <Grid>
+                            <ToggleButton x:Name="ToggleButton"
+                                          Focusable="False"
+                                          IsChecked="{Binding IsDropDownOpen, Mode=TwoWay, RelativeSource={RelativeSource TemplatedParent}}"
+                                          ClickMode="Press">
+                                <ToggleButton.Template>
+                                    <ControlTemplate TargetType="ToggleButton">
+                                        <Border x:Name="templateRoot"
+                                                Background="{DynamicResource SwInputBgBrush}"
+                                                BorderBrush="{DynamicResource SwInputBorderBrush}"
+                                                BorderThickness="1"
+                                                CornerRadius="2">
+                                            <Grid>
+                                                <Grid.ColumnDefinitions>
+                                                    <ColumnDefinition Width="*"/>
+                                                    <ColumnDefinition Width="22"/>
+                                                </Grid.ColumnDefinitions>
+                                                <Border Grid.Column="1" Background="Transparent">
+                                                    <Path Data="M 0 0 L 4 4 L 8 0 Z"
+                                                          Fill="{DynamicResource SwTextMutedBrush}"
+                                                          HorizontalAlignment="Center"
+                                                          VerticalAlignment="Center"/>
+                                                </Border>
+                                            </Grid>
+                                        </Border>
+                                        <ControlTemplate.Triggers>
+                                            <Trigger Property="IsMouseOver" Value="True">
+                                                <Setter TargetName="templateRoot" Property="BorderBrush" Value="{DynamicResource SwBlueBorderBrush}"/>
+                                            </Trigger>
+                                        </ControlTemplate.Triggers>
+                                    </ControlTemplate>
+                                </ToggleButton.Template>
+                            </ToggleButton>
+
+                            <ContentPresenter x:Name="ContentSite"
+                                              IsHitTestVisible="False"
+                                              Content="{TemplateBinding SelectionBoxItem}"
+                                              ContentTemplate="{TemplateBinding SelectionBoxItemTemplate}"
+                                              ContentTemplateSelector="{TemplateBinding ItemTemplateSelector}"
+                                              Margin="7,2,24,2"
+                                              VerticalAlignment="Center"
+                                              HorizontalAlignment="Left"/>
+
+                            <TextBox x:Name="PART_EditableTextBox"
+                                     Visibility="Hidden"
+                                     IsReadOnly="{TemplateBinding IsReadOnly}"
+                                     Background="Transparent"
+                                     Foreground="{DynamicResource SwTextDarkBrush}"
+                                     CaretBrush="{DynamicResource SwTextDarkBrush}"
+                                     BorderThickness="0"
+                                     Margin="4,1,23,1"
+                                     VerticalAlignment="Center"/>
+
+                            <Popup x:Name="Popup"
+                                   Placement="Bottom"
+                                   IsOpen="{TemplateBinding IsDropDownOpen}"
+                                   AllowsTransparency="True"
+                                   Focusable="False"
+                                   PopupAnimation="Slide">
+                                <Grid x:Name="DropDown"
+                                      SnapsToDevicePixels="True"
+                                      MinWidth="{TemplateBinding ActualWidth}"
+                                      MaxHeight="{TemplateBinding MaxDropDownHeight}">
+                                    <Border Background="{DynamicResource SwInputBgBrush}"
+                                            BorderBrush="{DynamicResource SwBlueBorderBrush}"
+                                            BorderThickness="1"
+                                            CornerRadius="2">
+                                        <ScrollViewer Margin="1" SnapsToDevicePixels="True">
+                                            <StackPanel IsItemsHost="True" KeyboardNavigation.DirectionalNavigation="Contained"/>
+                                        </ScrollViewer>
+                                    </Border>
+                                </Grid>
+                            </Popup>
+                        </Grid>
+                        <ControlTemplate.Triggers>
+                            <Trigger Property="IsEditable" Value="True">
+                                <Setter Property="IsTabStop" Value="False"/>
+                                <Setter TargetName="PART_EditableTextBox" Property="Visibility" Value="Visible"/>
+                                <Setter TargetName="ContentSite" Property="Visibility" Value="Hidden"/>
+                            </Trigger>
+                        </ControlTemplate.Triggers>
+                    </ControlTemplate>
+                </Setter.Value>
+            </Setter>
+        </Style>
+
+        <!-- Botão Primário SolidWorks (Vermelho Oficial BiblioteCad) -->
         <Style x:Key="ModernButton" TargetType="Button">
-            <Setter Property="Background" Value="{StaticResource SwBlueBrush}"/>
+            <Setter Property="Background" Value="{DynamicResource SwBlueBrush}"/>
             <Setter Property="Foreground" Value="#FFFFFF"/>
-            <Setter Property="BorderBrush" Value="#003E6B"/>
+            <Setter Property="BorderBrush" Value="{DynamicResource SwBlueBorderBrush}"/>
             <Setter Property="BorderThickness" Value="1"/>
             <Setter Property="Padding" Value="10,4"/>
             <Setter Property="FontWeight" Value="SemiBold"/>
@@ -62,21 +239,22 @@
                                 Background="{TemplateBinding Background}"
                                 BorderBrush="{TemplateBinding BorderBrush}"
                                 BorderThickness="{TemplateBinding BorderThickness}"
-                                CornerRadius="2"
+                                CornerRadius="3"
                                 Padding="{TemplateBinding Padding}">
                             <ContentPresenter HorizontalAlignment="Center" VerticalAlignment="Center"/>
                         </Border>
                         <ControlTemplate.Triggers>
                             <Trigger Property="IsMouseOver" Value="True">
-                                <Setter TargetName="border" Property="Background" Value="{StaticResource SwBlueHoverBrush}"/>
+                                <Setter TargetName="border" Property="Background" Value="{DynamicResource SwBlueHoverBrush}"/>
                             </Trigger>
                             <Trigger Property="IsPressed" Value="True">
-                                <Setter TargetName="border" Property="Background" Value="#003359"/>
+                                <Setter TargetName="border" Property="Opacity" Value="0.88"/>
                             </Trigger>
                             <Trigger Property="IsEnabled" Value="False">
-                                <Setter TargetName="border" Property="Background" Value="#D6D6D6"/>
-                                <Setter TargetName="border" Property="BorderBrush" Value="#BDBDBD"/>
-                                <Setter Property="Foreground" Value="#8C8C8C"/>
+                                <Setter TargetName="border" Property="Background" Value="{DynamicResource SwGroupHeaderBgBrush}"/>
+                                <Setter TargetName="border" Property="BorderBrush" Value="{DynamicResource SwBorderBrush}"/>
+                                <Setter Property="Foreground" Value="{DynamicResource SwTextMutedBrush}"/>
+                                <Setter Property="Opacity" Value="0.55"/>
                             </Trigger>
                         </ControlTemplate.Triggers>
                     </ControlTemplate>
@@ -86,10 +264,10 @@
 
         <!-- Botão Secundário (Estilo Toolbar Nativo do SolidWorks) -->
         <Style x:Key="SecondaryButton" TargetType="Button" BasedOn="{StaticResource ModernButton}">
-            <Setter Property="Background" Value="#F3F3F3"/>
-            <Setter Property="Foreground" Value="#222222"/>
-            <Setter Property="BorderBrush" Value="#B0B0B0"/>
-            <Setter Property="FontWeight" Value="Normal"/>
+            <Setter Property="Background" Value="{DynamicResource SwSecondaryBtnBgBrush}"/>
+            <Setter Property="Foreground" Value="{DynamicResource SwTextDarkBrush}"/>
+            <Setter Property="BorderBrush" Value="{DynamicResource SwSecondaryBtnBorderBrush}"/>
+            <Setter Property="FontWeight" Value="SemiBold"/>
             <Setter Property="Template">
                 <Setter.Value>
                     <ControlTemplate TargetType="Button">
@@ -97,23 +275,20 @@
                                 Background="{TemplateBinding Background}"
                                 BorderBrush="{TemplateBinding BorderBrush}"
                                 BorderThickness="1"
-                                CornerRadius="2"
+                                CornerRadius="3"
                                 Padding="{TemplateBinding Padding}">
                             <ContentPresenter HorizontalAlignment="Center" VerticalAlignment="Center"/>
                         </Border>
                         <ControlTemplate.Triggers>
                             <Trigger Property="IsMouseOver" Value="True">
-                                <Setter TargetName="border" Property="Background" Value="{StaticResource SwBlueLightBgBrush}"/>
-                                <Setter TargetName="border" Property="BorderBrush" Value="{StaticResource SwBlueBorderBrush}"/>
+                                <Setter TargetName="border" Property="Background" Value="{DynamicResource SwBlueLightBgBrush}"/>
+                                <Setter TargetName="border" Property="BorderBrush" Value="{DynamicResource SwBlueBorderBrush}"/>
                             </Trigger>
                             <Trigger Property="IsPressed" Value="True">
-                                <Setter TargetName="border" Property="Background" Value="#CCE4F7"/>
-                                <Setter TargetName="border" Property="BorderBrush" Value="#005499"/>
+                                <Setter TargetName="border" Property="Opacity" Value="0.85"/>
                             </Trigger>
                             <Trigger Property="IsEnabled" Value="False">
-                                <Setter TargetName="border" Property="Background" Value="#E6E6E6"/>
-                                <Setter TargetName="border" Property="BorderBrush" Value="#CCCCCC"/>
-                                <Setter Property="Foreground" Value="#999999"/>
+                                <Setter TargetName="border" Property="Opacity" Value="0.45"/>
                             </Trigger>
                         </ControlTemplate.Triggers>
                     </ControlTemplate>
@@ -123,8 +298,8 @@
 
         <!-- Botão de Confirmação / Aprovação (Verde Check PropertyManager) -->
         <Style x:Key="SuccessButton" TargetType="Button" BasedOn="{StaticResource ModernButton}">
-            <Setter Property="Background" Value="{StaticResource SwGreenBrush}"/>
-            <Setter Property="BorderBrush" Value="#0A522A"/>
+            <Setter Property="Background" Value="{DynamicResource SwGreenBrush}"/>
+            <Setter Property="BorderBrush" Value="#25A862"/>
             <Setter Property="Template">
                 <Setter.Value>
                     <ControlTemplate TargetType="Button">
@@ -132,18 +307,19 @@
                                 Background="{TemplateBinding Background}"
                                 BorderBrush="{TemplateBinding BorderBrush}"
                                 BorderThickness="1"
-                                CornerRadius="2"
+                                CornerRadius="3"
                                 Padding="{TemplateBinding Padding}">
                             <ContentPresenter HorizontalAlignment="Center" VerticalAlignment="Center"/>
                         </Border>
                         <ControlTemplate.Triggers>
                             <Trigger Property="IsMouseOver" Value="True">
-                                <Setter TargetName="border" Property="Background" Value="{StaticResource SwGreenHoverBrush}"/>
+                                <Setter TargetName="border" Property="Background" Value="{DynamicResource SwGreenHoverBrush}"/>
                             </Trigger>
                             <Trigger Property="IsEnabled" Value="False">
-                                <Setter TargetName="border" Property="Background" Value="#D6D6D6"/>
-                                <Setter TargetName="border" Property="BorderBrush" Value="#BDBDBD"/>
-                                <Setter Property="Foreground" Value="#8C8C8C"/>
+                                <Setter TargetName="border" Property="Background" Value="{DynamicResource SwGroupHeaderBgBrush}"/>
+                                <Setter TargetName="border" Property="BorderBrush" Value="{DynamicResource SwBorderBrush}"/>
+                                <Setter Property="Foreground" Value="{DynamicResource SwTextMutedBrush}"/>
+                                <Setter Property="Opacity" Value="0.55"/>
                             </Trigger>
                         </ControlTemplate.Triggers>
                     </ControlTemplate>
@@ -153,9 +329,9 @@
 
         <!-- Botão de Remoção / Cancelar -->
         <Style x:Key="DangerButton" TargetType="Button" BasedOn="{StaticResource ModernButton}">
-            <Setter Property="Background" Value="#FDF2F2"/>
-            <Setter Property="Foreground" Value="#B91C1C"/>
-            <Setter Property="BorderBrush" Value="#E0B4B4"/>
+            <Setter Property="Background" Value="{DynamicResource SwDangerBgBrush}"/>
+            <Setter Property="Foreground" Value="{DynamicResource SwDangerTextBrush}"/>
+            <Setter Property="BorderBrush" Value="{DynamicResource SwDangerBorderBrush}"/>
             <Setter Property="Template">
                 <Setter.Value>
                     <ControlTemplate TargetType="Button">
@@ -163,20 +339,18 @@
                                 Background="{TemplateBinding Background}"
                                 BorderBrush="{TemplateBinding BorderBrush}"
                                 BorderThickness="1"
-                                CornerRadius="2"
+                                CornerRadius="3"
                                 Padding="{TemplateBinding Padding}">
                             <ContentPresenter HorizontalAlignment="Center" VerticalAlignment="Center"/>
                         </Border>
                         <ControlTemplate.Triggers>
                             <Trigger Property="IsMouseOver" Value="True">
                                 <Setter TargetName="border" Property="Background" Value="#C42B1C"/>
-                                <Setter TargetName="border" Property="BorderBrush" Value="#961B0E"/>
+                                <Setter TargetName="border" Property="BorderBrush" Value="#FF6B6B"/>
                                 <Setter Property="Foreground" Value="#FFFFFF"/>
                             </Trigger>
                             <Trigger Property="IsEnabled" Value="False">
-                                <Setter TargetName="border" Property="Background" Value="#E6E6E6"/>
-                                <Setter TargetName="border" Property="BorderBrush" Value="#CCCCCC"/>
-                                <Setter Property="Foreground" Value="#999999"/>
+                                <Setter TargetName="border" Property="Opacity" Value="0.45"/>
                             </Trigger>
                         </ControlTemplate.Triggers>
                     </ControlTemplate>
@@ -186,19 +360,24 @@
 
         <!-- Estilo Nativo para DataGrid (Tabelas de Engenharia) -->
         <Style TargetType="DataGridColumnHeader">
-            <Setter Property="Background" Value="#DFE2E6"/>
-            <Setter Property="Foreground" Value="#222222"/>
+            <Setter Property="Background" Value="{DynamicResource SwGridHeaderBgBrush}"/>
+            <Setter Property="Foreground" Value="{DynamicResource SwTextDarkBrush}"/>
             <Setter Property="FontWeight" Value="SemiBold"/>
             <Setter Property="FontSize" Value="10.5"/>
-            <Setter Property="Padding" Value="6,4"/>
-            <Setter Property="BorderBrush" Value="#C2C4C6"/>
+            <Setter Property="Padding" Value="7,5"/>
+            <Setter Property="BorderBrush" Value="{DynamicResource SwGridLinesBrush}"/>
             <Setter Property="BorderThickness" Value="0,0,1,1"/>
             <Setter Property="HorizontalContentAlignment" Value="Left"/>
         </Style>
 
+        <Style TargetType="DataGridRow">
+            <Setter Property="Foreground" Value="{DynamicResource SwTextDarkBrush}"/>
+        </Style>
+
         <Style TargetType="DataGridCell">
-            <Setter Property="Padding" Value="4,2"/>
+            <Setter Property="Padding" Value="5,2"/>
             <Setter Property="BorderThickness" Value="0"/>
+            <Setter Property="Foreground" Value="{DynamicResource SwTextDarkBrush}"/>
             <Setter Property="Template">
                 <Setter.Value>
                     <ControlTemplate TargetType="DataGridCell">
@@ -210,8 +389,8 @@
             </Setter>
             <Style.Triggers>
                 <Trigger Property="IsSelected" Value="True">
-                    <Setter Property="Background" Value="#CCE8FF"/>
-                    <Setter Property="Foreground" Value="#002B4D"/>
+                    <Setter Property="Background" Value="{DynamicResource SwGridSelectedBgBrush}"/>
+                    <Setter Property="Foreground" Value="{DynamicResource SwGridSelectedTextBrush}"/>
                 </Trigger>
             </Style.Triggers>
         </Style>
@@ -219,65 +398,103 @@
 
     <Grid Margin="6">
         <Grid.RowDefinitions>
-            <RowDefinition Height="Auto"/> <!-- Barra de Título estilo PropertyManager -->
-            <RowDefinition Height="*"/>    <!-- Abas e Painéis -->
-            <RowDefinition Height="Auto"/> <!-- Barra Inferior de Console -->
+            <RowDefinition Height="Auto"/> <!-- Barra Superior BiblioteCad + Logo + Botão Tema -->
+            <RowDefinition Height="*"/>    <!-- Abas de Fluxo Guiado -->
+            <RowDefinition Height="Auto"/> <!-- Console Técnico Retrátil -->
         </Grid.RowDefinitions>
 
-        <!-- BARRA DE TÍTULO ESTILO SOLIDWORKS PROPERTYMANAGER -->
-        <Border Grid.Row="0" Background="#D8DCE0" BorderBrush="#B4B8BC" BorderThickness="1" CornerRadius="2" Margin="0,0,0,6">
+        <!-- ========================================================================= -->
+        <!-- CABEÇALHO SUPERIOR BIBLIOTECAD COM LOGO CUBO 3D E SELETOR DE TEMA         -->
+        <!-- ========================================================================= -->
+        <Border Grid.Row="0"
+                Background="{DynamicResource SwHeaderBgBrush}"
+                BorderBrush="{DynamicResource SwHeaderBorderBrush}"
+                BorderThickness="1"
+                CornerRadius="3"
+                Margin="0,0,0,6">
             <Grid>
                 <Grid.ColumnDefinitions>
                     <ColumnDefinition Width="4"/>
                     <ColumnDefinition Width="*"/>
                     <ColumnDefinition Width="Auto"/>
                 </Grid.ColumnDefinitions>
-                <Border Grid.Column="0" Background="{StaticResource SwBlueBrush}"/>
-                <StackPanel Grid.Column="1" Margin="8,5,6,5" VerticalAlignment="Center">
-                    <StackPanel Orientation="Horizontal">
-                        <TextBlock Text="AUTOSOLID" FontSize="12.5" FontWeight="Bold" Foreground="#1A1A1A"/>
-                        <TextBlock Text="  |  Automação Paramétrica CAD" FontSize="11" Foreground="#4A4D50" VerticalAlignment="Center"/>
+
+                <!-- Faixa Lateral Vermelha SolidWorks -->
+                <Border Grid.Column="0" Background="{DynamicResource SwBlueBrush}" CornerRadius="2,0,0,2"/>
+
+                <!-- Logo Oficial BC 3D + Nome BiblioteCad -->
+                <StackPanel Grid.Column="1" Orientation="Horizontal" Margin="9,5,6,5" VerticalAlignment="Center">
+                    <Image x:Name="HeaderLogoImage"
+                           Width="28" Height="28"
+                           Margin="0,0,8,0"
+                           VerticalAlignment="Center"
+                           RenderOptions.BitmapScalingMode="HighQuality"/>
+                    <StackPanel VerticalAlignment="Center">
+                        <StackPanel Orientation="Horizontal">
+                            <TextBlock Text="BiblioteCad" FontSize="13.5" FontWeight="Bold" Foreground="{DynamicResource SwTextDarkBrush}"/>
+                            <Border Background="{DynamicResource SwBadgeBgBrush}" CornerRadius="2" Padding="5,1" Margin="7,0,0,0" VerticalAlignment="Center">
+                                <TextBlock Text="SOLIDWORKS 3D" FontSize="8" FontWeight="Bold" Foreground="{DynamicResource SwTextHighlightBrush}"/>
+                            </Border>
+                        </StackPanel>
+                        <TextBlock Text="Automação Inteligente de Bibliotecas CAD" FontSize="9.5" Foreground="{DynamicResource SwTextMutedBrush}"/>
                     </StackPanel>
                 </StackPanel>
-                <Border Grid.Column="2" Background="#005A9E" CornerRadius="2" Padding="6,2" Margin="0,0,8,0" VerticalAlignment="Center">
-                    <TextBlock Text="SW 3D" FontSize="9" Foreground="#FFFFFF" FontWeight="Bold"/>
-                </Border>
+
+                <!-- Botão Alternador Claro / Escuro no Canto Superior Direito -->
+                <Button Grid.Column="2"
+                        Content="{Binding ThemeButtonText}"
+                        Command="{Binding AlternarTemaCommand}"
+                        ToolTip="{Binding ThemeButtonTooltip}"
+                        Style="{StaticResource SecondaryButton}"
+                        Margin="0,0,8,0"
+                        Padding="9,4"
+                        Height="26"
+                        FontSize="10.5"
+                        VerticalAlignment="Center"/>
             </Grid>
         </Border>
 
-        <!-- ABAS ESTILO COMMANDMANAGER / PROPERTYMANAGER -->
-        <TabControl Grid.Row="1" SelectedIndex="{Binding SelectedTabIndex}" BorderThickness="1" BorderBrush="{StaticResource SwBorderBrush}" Background="#F2F2F2" Padding="4">
+        <!-- ========================================================================= -->
+        <!-- ABAS DE FLUXO ESTILO COMMANDMANAGER DO SOLIDWORKS                         -->
+        <!-- ========================================================================= -->
+        <TabControl Grid.Row="1"
+                    SelectedIndex="{Binding SelectedTabIndex}"
+                    BorderThickness="1"
+                    BorderBrush="{DynamicResource SwBorderBrush}"
+                    Background="{DynamicResource SwSurfaceBgBrush}"
+                    Padding="5">
             <TabControl.Resources>
                 <Style TargetType="TabItem">
                     <Setter Property="Template">
                         <Setter.Value>
                             <ControlTemplate TargetType="TabItem">
                                 <Border x:Name="tabBorder"
-                                        Background="#E1E3E6"
-                                        BorderBrush="#C2C4C6"
+                                        Background="{DynamicResource SwTabInactiveBgBrush}"
+                                        BorderBrush="{DynamicResource SwBorderBrush}"
                                         BorderThickness="1,1,1,0"
-                                        CornerRadius="2,2,0,0"
-                                        Padding="12,5"
-                                        Margin="0,0,3,0"
+                                        CornerRadius="3,3,0,0"
+                                        Padding="13,6"
+                                        Margin="0,0,4,0"
                                         Cursor="Hand">
                                     <ContentPresenter ContentSource="Header" TextBlock.FontWeight="SemiBold" TextBlock.FontSize="11"/>
                                 </Border>
                                 <ControlTemplate.Triggers>
                                     <Trigger Property="IsSelected" Value="True">
-                                        <Setter TargetName="tabBorder" Property="Background" Value="#F2F2F2"/>
-                                        <Setter TargetName="tabBorder" Property="BorderBrush" Value="{StaticResource SwBlueBrush}"/>
-                                        <Setter TargetName="tabBorder" Property="BorderThickness" Value="1,2,1,0"/>
-                                        <Setter Property="Foreground" Value="{StaticResource SwBlueBrush}"/>
+                                        <Setter TargetName="tabBorder" Property="Background" Value="{DynamicResource SwSurfaceBgBrush}"/>
+                                        <Setter TargetName="tabBorder" Property="BorderBrush" Value="{DynamicResource SwBlueBrush}"/>
+                                        <Setter TargetName="tabBorder" Property="BorderThickness" Value="1,2.5,1,0"/>
+                                        <Setter Property="Foreground" Value="{DynamicResource SwTextHighlightBrush}"/>
                                     </Trigger>
                                     <Trigger Property="IsSelected" Value="False">
-                                        <Setter Property="Foreground" Value="#505050"/>
+                                        <Setter Property="Foreground" Value="{DynamicResource SwTabInactiveTextBrush}"/>
                                     </Trigger>
                                     <MultiTrigger>
                                         <MultiTrigger.Conditions>
                                             <Condition Property="IsSelected" Value="False"/>
                                             <Condition Property="IsMouseOver" Value="True"/>
                                         </MultiTrigger.Conditions>
-                                        <Setter TargetName="tabBorder" Property="Background" Value="#EBF2F8"/>
+                                        <Setter TargetName="tabBorder" Property="Background" Value="{DynamicResource SwBlueLightBgBrush}"/>
+                                        <Setter Property="Foreground" Value="{DynamicResource SwTextDarkBrush}"/>
                                     </MultiTrigger>
                                 </ControlTemplate.Triggers>
                             </ControlTemplate>
@@ -287,197 +504,215 @@
             </TabControl.Resources>
 
             <!-- ========================================================================= -->
-            <!-- ABA 1: CONFIGURAÇÃO DO TEMPLATE E MAPEAMENTO DE COTAS                     -->
+            <!-- ABA 1: PEÇA-TEMPLATE E MAPEAMENTO DE COTAS / EXTRUSÕES                     -->
             <!-- ========================================================================= -->
-            <TabItem Header="1. Peça &amp; Mapeamento">
+            <TabItem Header="1. Peça &amp; Cotas">
                 <ScrollViewer VerticalScrollBarVisibility="Auto" HorizontalScrollBarVisibility="Disabled">
                     <StackPanel Margin="2,4,2,8">
 
-                        <!-- SEÇÃO 1: DOCUMENTO ATIVO -->
-                        <Border Background="{StaticResource SwPanelBgBrush}" BorderBrush="{StaticResource SwBorderBrush}" BorderThickness="1" CornerRadius="2" Margin="0,0,0,8">
+                        <!-- PASSO 1: PEÇA-TEMPLATE ATIVA -->
+                        <Border Background="{DynamicResource SwPanelBgBrush}" BorderBrush="{DynamicResource SwBorderBrush}" BorderThickness="1" CornerRadius="3" Margin="0,0,0,8">
                             <StackPanel>
-                                <!-- Cabeçalho de Grupo PropertyManager -->
-                                <Border Background="{StaticResource SwGroupHeaderBgBrush}" BorderBrush="{StaticResource SwBorderBrush}" BorderThickness="0,0,0,1" Padding="6,4">
+                                <Border Background="{DynamicResource SwGroupHeaderBgBrush}" BorderBrush="{DynamicResource SwBorderBrush}" BorderThickness="0,0,0,1" Padding="7,5">
                                     <Grid>
                                         <Grid.ColumnDefinitions>
                                             <ColumnDefinition Width="3"/>
                                             <ColumnDefinition Width="*"/>
                                             <ColumnDefinition Width="Auto"/>
                                         </Grid.ColumnDefinitions>
-                                        <Border Grid.Column="0" Background="{StaticResource SwBlueBrush}" Margin="0,0,6,0"/>
-                                        <TextBlock Grid.Column="1" Text="Peça-Template Ativa (.SLDPRT)" FontSize="11" FontWeight="Bold" Foreground="{StaticResource SwTextDarkBrush}" VerticalAlignment="Center" Margin="6,0,0,0"/>
-                                        <Button Grid.Column="2" Content="↻ Atualizar" Style="{StaticResource SecondaryButton}" Command="{Binding AtualizarModeloAtivoCommand}" Padding="6,1" FontSize="10"/>
+                                        <Border Grid.Column="0" Background="{DynamicResource SwBlueBrush}" CornerRadius="1"/>
+                                        <TextBlock Grid.Column="1" Text="1. Peça-Template Ativa (.SLDPRT)" FontSize="11" FontWeight="Bold" Foreground="{DynamicResource SwTextDarkBrush}" VerticalAlignment="Center" Margin="7,0,0,0"/>
+                                        <Button Grid.Column="2" Content="↻ Atualizar" Style="{StaticResource SecondaryButton}" Command="{Binding AtualizarModeloAtivoCommand}" Padding="7,2" FontSize="10"/>
                                     </Grid>
                                 </Border>
 
-                                <!-- Conteúdo -->
-                                <Grid Margin="8,7">
+                                <Grid Margin="8,8">
                                     <Grid.ColumnDefinitions>
                                         <ColumnDefinition Width="Auto"/>
                                         <ColumnDefinition Width="*"/>
                                     </Grid.ColumnDefinitions>
-                                    <TextBlock Grid.Column="0" Text="Arquivo:" FontSize="11" Foreground="{StaticResource SwTextMutedBrush}" VerticalAlignment="Center" Margin="0,0,6,0"/>
-                                    <Border Grid.Column="1" Background="#FFFFFF" BorderBrush="#D0D3D6" BorderThickness="1" Padding="6,3">
-                                        <TextBlock Text="{Binding ActiveTemplateName}" FontWeight="SemiBold" FontSize="11.5" Foreground="#004578" TextTrimming="CharacterEllipsis"/>
+                                    <TextBlock Grid.Column="0" Text="Modelo:" FontSize="10.5" Foreground="{DynamicResource SwTextMutedBrush}" VerticalAlignment="Center" Margin="0,0,7,0"/>
+                                    <Border Grid.Column="1" Background="{DynamicResource SwInputBgBrush}" BorderBrush="{DynamicResource SwInputBorderBrush}" BorderThickness="1" CornerRadius="2" Padding="7,4">
+                                        <TextBlock Text="{Binding ActiveTemplateName}" FontWeight="SemiBold" FontSize="11.5" Foreground="{DynamicResource SwTextHighlightBrush}" TextTrimming="CharacterEllipsis"/>
                                     </Border>
                                 </Grid>
                             </StackPanel>
                         </Border>
 
-                        <!-- SEÇÃO 2: MAPEAMENTO DE COTAS (SKETCH E EXTRUSÃO) -->
-                        <Border Background="{StaticResource SwPanelBgBrush}" BorderBrush="{StaticResource SwBorderBrush}" BorderThickness="1" CornerRadius="2" Margin="0,0,0,8">
+                        <!-- PASSO 2: SELEÇÃO CONTÍNUA DE COTAS / ESBOÇOS / EXTRUSÕES -->
+                        <Border Background="{DynamicResource SwPanelBgBrush}" BorderBrush="{DynamicResource SwBorderBrush}" BorderThickness="1" CornerRadius="3" Margin="0,0,0,8">
                             <StackPanel>
-                                <Border Background="{StaticResource SwGroupHeaderBgBrush}" BorderBrush="{StaticResource SwBorderBrush}" BorderThickness="0,0,0,1" Padding="6,4">
+                                <Border Background="{DynamicResource SwGroupHeaderBgBrush}" BorderBrush="{DynamicResource SwBorderBrush}" BorderThickness="0,0,0,1" Padding="7,5">
                                     <Grid>
                                         <Grid.ColumnDefinitions>
                                             <ColumnDefinition Width="3"/>
                                             <ColumnDefinition Width="*"/>
+                                            <ColumnDefinition Width="Auto"/>
                                         </Grid.ColumnDefinitions>
-                                        <Border Grid.Column="0" Background="{StaticResource SwBlueBrush}"/>
-                                        <TextBlock Grid.Column="1" Text="Mapeamento de Cotas (Esboço / Extrusão)" FontSize="11" FontWeight="Bold" Foreground="{StaticResource SwTextDarkBrush}" Margin="6,0,0,0"/>
+                                        <Border Grid.Column="0" Background="{DynamicResource SwBlueBrush}" CornerRadius="1"/>
+                                        <TextBlock Grid.Column="1" Text="2. Mapeamento de Cotas e Extrusões" FontSize="11" FontWeight="Bold" Foreground="{DynamicResource SwTextDarkBrush}" VerticalAlignment="Center" Margin="7,0,0,0"/>
+                                        <Border Grid.Column="2" Background="{DynamicResource SwBadgeBgBrush}" CornerRadius="2" Padding="6,1" VerticalAlignment="Center">
+                                            <TextBlock Text="{Binding MappingsCountText}" FontSize="9.5" FontWeight="SemiBold" Foreground="{DynamicResource SwTextHighlightBrush}"/>
+                                        </Border>
                                     </Grid>
                                 </Border>
 
-                                <StackPanel Margin="8,7">
-                                    <TextBlock Text="1º Clique em Selecionar, 2º Clique na cota ou extrusão no SolidWorks, 3º Confirme no botão verde (✔):" 
-                                               FontSize="10.5" Foreground="{StaticResource SwTextMutedBrush}" TextWrapping="Wrap" Margin="0,0,0,6"/>
+                                <StackPanel Margin="8,8">
+                                    <TextBlock Text="Clique 1 vez no botão abaixo e selecione diretamente as cotas, esboços ou extrusões no SolidWorks. Dê um Apelido (IA) claro para cada medida:" 
+                                               FontSize="10.5" Foreground="{DynamicResource SwTextMutedBrush}" TextWrapping="Wrap" Margin="0,0,0,7"/>
 
-                                    <Grid Margin="0,0,0,6">
-                                        <Grid.ColumnDefinitions>
-                                            <ColumnDefinition Width="*"/>
-                                            <ColumnDefinition Width="Auto"/>
-                                        </Grid.ColumnDefinitions>
-                                        <Button Grid.Column="0" Content="+ Selecionar Cota / Extrusão" Style="{StaticResource ModernButton}" Command="{Binding IniciarSelecaoCotaCommand}" Margin="0,0,5,0" FontSize="11" Height="26"/>
-                                        <Button Grid.Column="1" Content="Remover" Style="{StaticResource DangerButton}" Command="{Binding RemoverCotaCommand}" IsEnabled="{Binding CanEditUi}" Padding="10,0" FontSize="11" Height="26"/>
-                                    </Grid>
+                                    <Button Content="{Binding SelectDimensionButtonText}"
+                                            Style="{StaticResource ModernButton}"
+                                            Command="{Binding IniciarSelecaoCotaCommand}"
+                                            FontSize="11" Height="28" Margin="0,0,0,7"/>
 
-                                    <!-- Painel Interativo de Seleção estilo Callout do SolidWorks -->
+                                    <!-- Banner de Captura Contínua Ativa -->
                                     <Border Visibility="{Binding IsSelectingDimension, Converter={StaticResource BoolToVisConverter}}"
-                                            Background="#EBF7EE" BorderBrush="#5CA974" BorderThickness="1" CornerRadius="2" Padding="6,5" Margin="0,0,0,6">
+                                            Background="{DynamicResource SwBannerBgBrush}"
+                                            BorderBrush="{DynamicResource SwBannerBorderBrush}"
+                                            BorderThickness="1" CornerRadius="3" Padding="7,5" Margin="0,0,0,7">
                                         <Grid>
                                             <Grid.ColumnDefinitions>
                                                 <ColumnDefinition Width="*"/>
                                                 <ColumnDefinition Width="Auto"/>
-                                                <ColumnDefinition Width="Auto"/>
                                             </Grid.ColumnDefinitions>
                                             <TextBlock Grid.Column="0" Text="{Binding SelectionPromptText}"
-                                                       FontSize="10.5" FontWeight="SemiBold" Foreground="#0F5128"
+                                                       FontSize="10.5" FontWeight="SemiBold" Foreground="{DynamicResource SwBannerTextBrush}"
                                                        VerticalAlignment="Center" TextWrapping="Wrap" Margin="0,0,6,0"/>
-                                            <Button Grid.Column="1" Content="✔"
-                                                    Style="{StaticResource SuccessButton}"
-                                                    Command="{Binding ConfirmarCotaCommand}"
-                                                    Visibility="{Binding HasPendingDimension, Converter={StaticResource BoolToVisConverter}}"
-                                                    ToolTip="Confirmar seleção desta cota/extrusão"
-                                                    Width="28" Height="23" Padding="0" FontSize="12" FontWeight="Bold" Margin="0,0,3,0"/>
-                                            <Button Grid.Column="2" Content="✕"
+                                            <Button Grid.Column="1" Content="✕"
                                                     Style="{StaticResource SecondaryButton}"
                                                     Command="{Binding CancelarSelecaoCotaCommand}"
-                                                    ToolTip="Cancelar modo de seleção"
-                                                    Width="23" Height="23" Padding="0" FontSize="10"/>
+                                                    ToolTip="Encerrar modo de captura"
+                                                    Width="23" Height="22" Padding="0" FontSize="10"/>
                                         </Grid>
                                     </Border>
 
-                                    <!-- Tabela de Cotas Mapeadas -->
-                                    <DataGrid x:Name="MappingsDataGrid" ItemsSource="{Binding Mappings}" SelectedItem="{Binding SelectedMapping}" 
-                                              AutoGenerateColumns="False" CanUserAddRows="False" HeadersVisibility="Column"
-                                              MinHeight="110" MaxHeight="180"
-                                              BorderBrush="#B8BABC" BorderThickness="1"
-                                              GridLinesVisibility="All" HorizontalGridLinesBrush="#DCDFE3" VerticalGridLinesBrush="#DCDFE3"
-                                              Background="#FFFFFF" AlternatingRowBackground="#F7F8FA" RowHeight="23">
+                                    <!-- Tabela de Cotas Mapeadas com Exclusão ✕ em 1 Clique -->
+                                    <DataGrid x:Name="MappingsDataGrid"
+                                              ItemsSource="{Binding Mappings}"
+                                              SelectedItem="{Binding SelectedMapping}"
+                                              AutoGenerateColumns="False"
+                                              CanUserAddRows="False"
+                                              HeadersVisibility="Column"
+                                              MinHeight="120" MaxHeight="195"
+                                              BorderBrush="{DynamicResource SwInputBorderBrush}"
+                                              BorderThickness="1"
+                                              GridLinesVisibility="All"
+                                              HorizontalGridLinesBrush="{DynamicResource SwGridLinesBrush}"
+                                              VerticalGridLinesBrush="{DynamicResource SwGridLinesBrush}"
+                                              Background="{DynamicResource SwGridBgBrush}"
+                                              RowBackground="{DynamicResource SwGridBgBrush}"
+                                              AlternatingRowBackground="{DynamicResource SwGridAltRowBgBrush}"
+                                              RowHeight="25">
                                         <DataGrid.Columns>
                                             <DataGridTextColumn Header="Cota SolidWorks" Binding="{Binding FullName}" IsReadOnly="True" Width="1.25*"/>
-                                            <DataGridTextColumn Header="Apelido (IA)" Binding="{Binding Alias, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}" FontWeight="Bold" Width="*"/>
-                                            <DataGridTextColumn Header="Atual (mm)" Binding="{Binding CurrentValueMm, StringFormat={}{0:F2}}" IsReadOnly="True" Width="0.75*"/>
+                                            <DataGridTextColumn Header="Apelido (IA) ✎" Binding="{Binding Alias, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}" FontWeight="Bold" Width="*"/>
+                                            <DataGridTextColumn Header="Atual (mm)" Binding="{Binding CurrentValueMm, StringFormat={}{0:F2}}" IsReadOnly="True" Width="0.72*"/>
+                                            <DataGridTemplateColumn Header="" Width="30" IsReadOnly="True">
+                                                <DataGridTemplateColumn.CellTemplate>
+                                                    <DataTemplate>
+                                                        <Button Content="✕"
+                                                                Style="{StaticResource DangerButton}"
+                                                                Command="{Binding DataContext.RemoverCotaCommand, RelativeSource={RelativeSource AncestorType=UserControl}}"
+                                                                CommandParameter="{Binding}"
+                                                                ToolTip="Remover esta cota com 1 clique"
+                                                                Width="20" Height="18" Padding="0" FontSize="9.5" FontWeight="Bold"
+                                                                HorizontalAlignment="Center" VerticalAlignment="Center"/>
+                                                    </DataTemplate>
+                                                </DataGridTemplateColumn.CellTemplate>
+                                            </DataGridTemplateColumn>
                                         </DataGrid.Columns>
                                     </DataGrid>
                                 </StackPanel>
                             </StackPanel>
                         </Border>
 
-                        <!-- SEÇÃO 3: DIRETÓRIO DE DESTINO -->
-                        <Border Background="{StaticResource SwPanelBgBrush}" BorderBrush="{StaticResource SwBorderBrush}" BorderThickness="1" CornerRadius="2" Margin="0,0,0,8">
+                        <!-- PASSO 3: PASTA DE DESTINO DA BIBLIOTECA -->
+                        <Border Background="{DynamicResource SwPanelBgBrush}" BorderBrush="{DynamicResource SwBorderBrush}" BorderThickness="1" CornerRadius="3" Margin="0,0,0,8">
                             <StackPanel>
-                                <Border Background="{StaticResource SwGroupHeaderBgBrush}" BorderBrush="{StaticResource SwBorderBrush}" BorderThickness="0,0,0,1" Padding="6,4">
+                                <Border Background="{DynamicResource SwGroupHeaderBgBrush}" BorderBrush="{DynamicResource SwBorderBrush}" BorderThickness="0,0,0,1" Padding="7,5">
                                     <Grid>
                                         <Grid.ColumnDefinitions>
                                             <ColumnDefinition Width="3"/>
                                             <ColumnDefinition Width="*"/>
                                         </Grid.ColumnDefinitions>
-                                        <Border Grid.Column="0" Background="{StaticResource SwBlueBrush}"/>
-                                        <TextBlock Grid.Column="1" Text="Pasta de Destino da Biblioteca" FontSize="11" FontWeight="Bold" Foreground="{StaticResource SwTextDarkBrush}" Margin="6,0,0,0"/>
+                                        <Border Grid.Column="0" Background="{DynamicResource SwBlueBrush}" CornerRadius="1"/>
+                                        <TextBlock Grid.Column="1" Text="3. Pasta de Destino da Biblioteca" FontSize="11" FontWeight="Bold" Foreground="{DynamicResource SwTextDarkBrush}" Margin="7,0,0,0"/>
                                     </Grid>
                                 </Border>
 
-                                <Grid Margin="8,7">
+                                <Grid Margin="8,8">
                                     <Grid.ColumnDefinitions>
                                         <ColumnDefinition Width="*"/>
                                         <ColumnDefinition Width="Auto"/>
                                     </Grid.ColumnDefinitions>
-                                    <TextBox Grid.Column="0" Text="{Binding OutputDirectory, UpdateSourceTrigger=PropertyChanged}" Height="24" Margin="0,0,5,0" FontSize="11"/>
-                                    <Button Grid.Column="1" Content="Procurar..." Style="{StaticResource SecondaryButton}" Command="{Binding SelecionarPastaDestinoCommand}" Height="24" Padding="10,0" FontSize="11"/>
+                                    <TextBox Grid.Column="0" Text="{Binding OutputDirectory, UpdateSourceTrigger=PropertyChanged}" Height="25" Margin="0,0,6,0" FontSize="11"/>
+                                    <Button Grid.Column="1" Content="📁 Procurar..." Style="{StaticResource SecondaryButton}" Command="{Binding SelecionarPastaDestinoCommand}" Height="25" Padding="10,0" FontSize="10.5"/>
                                 </Grid>
                             </StackPanel>
                         </Border>
 
                         <!-- BOTÃO AVANÇAR -->
-                        <Button Content="Avançar para Extração &amp; Tabela ➔" Style="{StaticResource ModernButton}" 
-                                Command="{Binding AvancarParaAba2Command}" Height="30" Margin="0,2,0,4" FontSize="11.5"/>
+                        <Button Content="Avançar para Catálogo &amp; Extração IA ➔"
+                                Style="{StaticResource ModernButton}"
+                                Command="{Binding AvancarParaAba2Command}"
+                                Height="31" Margin="0,2,0,4" FontSize="11.5"/>
                     </StackPanel>
                 </ScrollViewer>
             </TabItem>
 
             <!-- ========================================================================= -->
-            <!-- ABA 2: ENTRADA DE DADOS, IA E GERAÇÃO EM LOTE                             -->
+            <!-- ABA 2: EXTRAÇÃO INTELIGENTE COM IA E GERAÇÃO EM LOTE                       -->
             <!-- ========================================================================= -->
-            <TabItem Header="2. Tabela &amp; Geração IA">
+            <TabItem Header="2. Catálogo IA &amp; Geração">
                 <ScrollViewer VerticalScrollBarVisibility="Auto" HorizontalScrollBarVisibility="Disabled">
                     <StackPanel Margin="2,4,2,8">
 
                         <!-- SEÇÃO 1: CONFIGURAÇÃO DE IA E ARQUIVO DE ENTRADA -->
-                        <Border Background="{StaticResource SwPanelBgBrush}" BorderBrush="{StaticResource SwBorderBrush}" BorderThickness="1" CornerRadius="2" Margin="0,0,0,6">
+                        <Border Background="{DynamicResource SwPanelBgBrush}" BorderBrush="{DynamicResource SwBorderBrush}" BorderThickness="1" CornerRadius="3" Margin="0,0,0,6">
                             <StackPanel>
-                                <Border Background="{StaticResource SwGroupHeaderBgBrush}" BorderBrush="{StaticResource SwBorderBrush}" BorderThickness="0,0,0,1" Padding="6,4">
+                                <Border Background="{DynamicResource SwGroupHeaderBgBrush}" BorderBrush="{DynamicResource SwBorderBrush}" BorderThickness="0,0,0,1" Padding="7,5">
                                     <Grid>
                                         <Grid.ColumnDefinitions>
                                             <ColumnDefinition Width="3"/>
                                             <ColumnDefinition Width="*"/>
                                         </Grid.ColumnDefinitions>
-                                        <Border Grid.Column="0" Background="{StaticResource SwBlueBrush}"/>
-                                        <TextBlock Grid.Column="1" Text="1. Leitura Inteligente de Desenho / Tabela (IA)" FontSize="11" FontWeight="Bold" Foreground="{StaticResource SwTextDarkBrush}" Margin="6,0,0,0"/>
+                                        <Border Grid.Column="0" Background="{DynamicResource SwBlueBrush}" CornerRadius="1"/>
+                                        <TextBlock Grid.Column="1" Text="1. Leitura Inteligente de Desenho / Tabela (IA)" FontSize="11" FontWeight="Bold" Foreground="{DynamicResource SwTextDarkBrush}" Margin="7,0,0,0"/>
                                     </Grid>
                                 </Border>
 
-                                <StackPanel Margin="8,7">
+                                <StackPanel Margin="8,8">
                                     <!-- Provedor e Modelo -->
-                                    <Grid Margin="0,0,0,5">
+                                    <Grid Margin="0,0,0,6">
                                         <Grid.ColumnDefinitions>
                                             <ColumnDefinition Width="*"/>
-                                            <ColumnDefinition Width="135"/>
+                                            <ColumnDefinition Width="138"/>
                                             <ColumnDefinition Width="Auto"/>
                                         </Grid.ColumnDefinitions>
                                         <StackPanel Grid.Column="0" Margin="0,0,5,0">
-                                            <TextBlock Text="Provedor:" FontSize="10" Foreground="{StaticResource SwTextMutedBrush}" Margin="0,0,0,1"/>
-                                            <ComboBox ItemsSource="{Binding AvailableProviders}" SelectedItem="{Binding SelectedProvider}" Height="23" FontSize="11"/>
+                                            <TextBlock Text="Provedor de IA:" FontSize="10" Foreground="{DynamicResource SwTextMutedBrush}" Margin="0,0,0,2"/>
+                                            <ComboBox ItemsSource="{Binding AvailableProviders}" SelectedItem="{Binding SelectedProvider}" Height="24" FontSize="11"/>
                                         </StackPanel>
                                         <StackPanel Grid.Column="1">
-                                            <TextBlock Text="Modelo IA:" FontSize="10" Foreground="{StaticResource SwTextMutedBrush}" Margin="0,0,0,1"/>
-                                            <ComboBox ItemsSource="{Binding AvailableModels}" 
+                                            <TextBlock Text="Modelo Ativo:" FontSize="10" Foreground="{DynamicResource SwTextMutedBrush}" Margin="0,0,0,2"/>
+                                            <ComboBox ItemsSource="{Binding AvailableModels}"
                                                       SelectedItem="{Binding SelectedModel, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}"
-                                                      Text="{Binding SelectedModel, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}" 
-                                                      IsEditable="True" Height="23" FontSize="11"/>
+                                                      Text="{Binding SelectedModel, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}"
+                                                      IsEditable="True" Height="24" FontSize="11"/>
                                         </StackPanel>
-                                        <Button Grid.Column="2" Content="🔍 Modelos" Style="{StaticResource SecondaryButton}" 
-                                                Command="{Binding DetectarModelosContaCommand}" 
+                                        <Button Grid.Column="2" Content="🔍 Modelos" Style="{StaticResource SecondaryButton}"
+                                                Command="{Binding DetectarModelosContaCommand}"
                                                 Visibility="{Binding IsGeminiSelected, Converter={StaticResource BoolToVisConverter}}"
-                                                VerticalAlignment="Bottom" Margin="4,0,0,0" Padding="6,0" Height="23" FontSize="10"
+                                                VerticalAlignment="Bottom" Margin="5,0,0,0" Padding="7,0" Height="24" FontSize="10"
                                                 ToolTip="Detecta automaticamente os modelos ativos na sua conta Google AI Studio"/>
                                     </Grid>
 
                                     <!-- API Key Persistente com Botão de Editar -->
-                                    <StackPanel Margin="0,0,0,6">
-                                        <StackPanel Orientation="Horizontal" Margin="0,0,0,1">
-                                            <TextBlock Text="{Binding ApiKeyLabel}" FontSize="10" Foreground="{StaticResource SwTextMutedBrush}"/>
-                                            <TextBlock Text="{Binding ApiKeySavedBadge}" FontSize="10" FontWeight="SemiBold" Foreground="#107C41" Margin="5,0,0,0"/>
+                                    <StackPanel Margin="0,0,0,7">
+                                        <StackPanel Orientation="Horizontal" Margin="0,0,0,2">
+                                            <TextBlock Text="{Binding ApiKeyLabel}" FontSize="10" Foreground="{DynamicResource SwTextMutedBrush}"/>
+                                            <TextBlock Text="{Binding ApiKeySavedBadge}" FontSize="10" FontWeight="Bold" Foreground="{DynamicResource SwBannerTextBrush}" Margin="6,0,0,0"/>
                                         </StackPanel>
                                         <Grid>
                                             <Grid.ColumnDefinitions>
@@ -487,14 +722,13 @@
                                             <TextBox Grid.Column="0"
                                                      Text="{Binding ApiKey, UpdateSourceTrigger=PropertyChanged}"
                                                      IsReadOnly="{Binding IsApiKeyLocked}"
-                                                     Height="23" FontSize="11">
+                                                     Height="24" FontSize="11">
                                                 <TextBox.Style>
                                                     <Style TargetType="TextBox" BasedOn="{StaticResource {x:Type TextBox}}">
-                                                        <Setter Property="Background" Value="#FFFFFF"/>
                                                         <Style.Triggers>
                                                             <DataTrigger Binding="{Binding IsApiKeyLocked}" Value="True">
-                                                                <Setter Property="Background" Value="#EAECEE"/>
-                                                                <Setter Property="Foreground" Value="#505458"/>
+                                                                <Setter Property="Background" Value="{DynamicResource SwInputReadOnlyBgBrush}"/>
+                                                                <Setter Property="Foreground" Value="{DynamicResource SwTextMutedBrush}"/>
                                                             </DataTrigger>
                                                         </Style.Triggers>
                                                     </Style>
@@ -505,60 +739,89 @@
                                                     Command="{Binding AlternarEdicaoApiKeyCommand}"
                                                     Style="{StaticResource SecondaryButton}"
                                                     ToolTip="{Binding ApiKeyEditTooltip}"
-                                                    Width="26" Height="23" Padding="0" Margin="4,0,0,0" FontSize="11"/>
+                                                    Width="27" Height="24" Padding="0" Margin="5,0,0,0" FontSize="11"/>
                                         </Grid>
                                     </StackPanel>
 
-                                    <!-- Área de Seleção / Drag & Drop de Arquivo -->
-                                    <Border x:Name="DropZoneBorder" BorderBrush="#9FA4AA" BorderThickness="1" CornerRadius="2" Background="#EAECEF" Padding="6,5" Margin="0,0,0,6"
-                                            AllowDrop="True" Drop="DropZoneBorder_Drop" DragOver="DropZoneBorder_DragOver">
+                                    <!-- Área Imersiva de Drag & Drop de Catálogo / Tabela com Logo BC -->
+                                    <Border x:Name="DropZoneBorder"
+                                            BorderBrush="{DynamicResource SwDropZoneBorderBrush}"
+                                            BorderThickness="1"
+                                            CornerRadius="3"
+                                            Background="{DynamicResource SwDropZoneBgBrush}"
+                                            Padding="8,6"
+                                            Margin="0,0,0,7"
+                                            AllowDrop="True"
+                                            Drop="DropZoneBorder_Drop"
+                                            DragOver="DropZoneBorder_DragOver">
                                         <Grid>
                                             <Grid.ColumnDefinitions>
+                                                <ColumnDefinition Width="Auto"/>
                                                 <ColumnDefinition Width="*"/>
                                                 <ColumnDefinition Width="Auto"/>
                                             </Grid.ColumnDefinitions>
-                                            <StackPanel Grid.Column="0" VerticalAlignment="Center" Margin="0,0,6,0">
-                                                <TextBlock Text="Catálogo / Desenho / Tabela (Arraste ou selecione):" FontSize="9.5" Foreground="{StaticResource SwTextMutedBrush}"/>
-                                                <TextBlock Text="{Binding InputFilePath, FallbackValue='Nenhum arquivo selecionado'}" FontWeight="SemiBold" FontSize="11" Foreground="#004578" TextTrimming="CharacterEllipsis"/>
+                                            <Image x:Name="DropZoneLogoImage"
+                                                   Grid.Column="0"
+                                                   Width="22" Height="22"
+                                                   Margin="0,0,7,0"
+                                                   VerticalAlignment="Center"
+                                                   RenderOptions.BitmapScalingMode="HighQuality"/>
+                                            <StackPanel Grid.Column="1" VerticalAlignment="Center" Margin="0,0,6,0">
+                                                <TextBlock Text="Catálogo, Desenho ou Tabela (Imagem / PDF / CSV):" FontSize="9.5" Foreground="{DynamicResource SwTextMutedBrush}"/>
+                                                <TextBlock Text="{Binding InputFileDisplayName}"
+                                                           FontWeight="SemiBold"
+                                                           FontSize="11"
+                                                           Foreground="{DynamicResource SwTextHighlightBrush}"
+                                                           TextTrimming="CharacterEllipsis"
+                                                           ToolTip="{Binding InputFilePath}"/>
                                             </StackPanel>
-                                            <Button Grid.Column="1" Content="Arquivo..." Style="{StaticResource SecondaryButton}" Command="{Binding SelecionarArquivoCommand}" Padding="8,2" Height="23" FontSize="10.5"/>
+                                            <Button Grid.Column="2" Content="📂 Escolher..." Style="{StaticResource SecondaryButton}" Command="{Binding SelecionarArquivoCommand}" Padding="9,3" Height="24" FontSize="10.5"/>
                                         </Grid>
                                     </Border>
 
                                     <!-- Caixa de Instruções Adicionais (Opcional) -->
-                                    <StackPanel Margin="0,0,0,7">
-                                        <TextBlock Text="Instruções para a IA (Opcional):" FontSize="10" Foreground="{StaticResource SwTextMutedBrush}" Margin="0,0,0,1"/>
+                                    <StackPanel Margin="0,0,0,8">
+                                        <TextBlock Text="Instruções para a IA (Opcional — ex: filtrar faixa M4 até M10):" FontSize="10" Foreground="{DynamicResource SwTextMutedBrush}" Margin="0,0,0,2"/>
                                         <TextBox Text="{Binding UserInstructions, UpdateSourceTrigger=PropertyChanged}"
                                                  Height="42"
                                                  AcceptsReturn="True"
                                                  TextWrapping="Wrap"
                                                  VerticalScrollBarVisibility="Auto"
                                                  VerticalContentAlignment="Top"
-                                                 Padding="5,3"
+                                                 Padding="6,4"
                                                  FontSize="10.5"
-                                                 ToolTip="Oriente a IA caso necessário (ex: 'Considere comprimento fixo de 25mm' ou 'Associe D_EXT à coluna d2')."/>
+                                                 ToolTip="Oriente a IA caso necessário (ex: 'Extraia apenas do M4 ao M10' ou 'Considere comprimento fixo de 25mm')."/>
                                     </StackPanel>
 
                                     <!-- Botão de Extração -->
-                                    <Button Content="⚡ Extrair Dados da Tabela com IA" Style="{StaticResource ModernButton}" 
-                                            Command="{Binding ExtrairComIaCommand}" Height="28" FontSize="11.5"/>
+                                    <Button Content="⚡ Extrair Dados da Tabela com IA"
+                                            Style="{StaticResource ModernButton}"
+                                            Command="{Binding ExtrairComIaCommand}"
+                                            Height="29" FontSize="11.5"/>
                                 </StackPanel>
                             </StackPanel>
                         </Border>
 
                         <!-- BARRA DE STATUS E TELEMETRIA DE TEMPO -->
-                        <Border Background="{StaticResource SwPanelBgBrush}" BorderBrush="{StaticResource SwBorderBrush}" BorderThickness="1" CornerRadius="2" Padding="8,5" Margin="0,0,0,6">
+                        <Border Background="{DynamicResource SwPanelBgBrush}" BorderBrush="{DynamicResource SwBorderBrush}" BorderThickness="1" CornerRadius="3" Padding="8,6" Margin="0,0,0,6">
                             <StackPanel>
-                                <Grid Margin="0,0,0,3">
+                                <Grid Margin="0,0,0,4">
                                     <Grid.ColumnDefinitions>
                                         <ColumnDefinition Width="*"/>
                                         <ColumnDefinition Width="Auto"/>
                                     </Grid.ColumnDefinitions>
-                                    <TextBlock Grid.Column="0" Text="{Binding ProgressStatusText}" FontSize="10.5" FontWeight="SemiBold" Foreground="{StaticResource SwTextDarkBrush}" TextTrimming="CharacterEllipsis"/>
-                                    <TextBlock Grid.Column="1" Text="{Binding ProgressValue, StringFormat={}{0:F0}%}" FontSize="10.5" FontWeight="Bold" Foreground="{StaticResource SwBlueBrush}" Margin="6,0,0,0"/>
+                                    <TextBlock Grid.Column="0" Text="{Binding ProgressStatusText}" FontSize="10.5" FontWeight="SemiBold" Foreground="{DynamicResource SwTextDarkBrush}" TextTrimming="CharacterEllipsis"/>
+                                    <TextBlock Grid.Column="1" Text="{Binding ProgressValue, StringFormat={}{0:F0}%}" FontSize="10.5" FontWeight="Bold" Foreground="{DynamicResource SwTextHighlightBrush}" Margin="6,0,0,0"/>
                                 </Grid>
 
-                                <ProgressBar Height="6" Value="{Binding ProgressValue}" Minimum="0" Maximum="100" Foreground="{StaticResource SwBlueBrush}" Background="#D8DCE0" BorderBrush="#B8BABC" BorderThickness="1" Margin="0,0,0,3"/>
+                                <ProgressBar Height="6"
+                                             Value="{Binding ProgressValue}"
+                                             Minimum="0" Maximum="100"
+                                             Foreground="{DynamicResource SwBlueBrush}"
+                                             Background="{DynamicResource SwInputBgBrush}"
+                                             BorderBrush="{DynamicResource SwBorderBrush}"
+                                             BorderThickness="1"
+                                             Margin="0,0,0,4"/>
 
                                 <Grid>
                                     <Grid.ColumnDefinitions>
@@ -566,26 +829,30 @@
                                         <ColumnDefinition Width="Auto"/>
                                         <ColumnDefinition Width="*"/>
                                     </Grid.ColumnDefinitions>
-                                    <TextBlock Grid.Column="0" Text="{Binding ElapsedTimeText}" FontSize="9.5" Foreground="{StaticResource SwTextMutedBrush}" Margin="0,0,10,0"/>
-                                    <TextBlock Grid.Column="1" Text="{Binding EstimatedTimeText}" FontSize="9.5" Foreground="{StaticResource SwBlueBrush}" FontWeight="SemiBold" Margin="0,0,10,0"/>
-                                    <TextBlock Grid.Column="2" Text="{Binding SpeedDetailText}" FontSize="9.5" Foreground="{StaticResource SwTextMutedBrush}" HorizontalAlignment="Right" TextTrimming="CharacterEllipsis"/>
+                                    <TextBlock Grid.Column="0" Text="{Binding ElapsedTimeText}" FontSize="9.5" Foreground="{DynamicResource SwTextMutedBrush}" Margin="0,0,10,0"/>
+                                    <TextBlock Grid.Column="1" Text="{Binding EstimatedTimeText}" FontSize="9.5" Foreground="{DynamicResource SwTextHighlightBrush}" FontWeight="SemiBold" Margin="0,0,10,0"/>
+                                    <TextBlock Grid.Column="2" Text="{Binding SpeedDetailText}" FontSize="9.5" Foreground="{DynamicResource SwTextMutedBrush}" HorizontalAlignment="Right" TextTrimming="CharacterEllipsis"/>
                                 </Grid>
                             </StackPanel>
                         </Border>
 
                         <!-- SEÇÃO 2: TABELA ESTRUTURADA DE VARIAÇÕES E PREFIXO SKU -->
-                        <Border Background="{StaticResource SwPanelBgBrush}" BorderBrush="{StaticResource SwBorderBrush}" BorderThickness="1" CornerRadius="2" Margin="0,0,0,6">
+                        <Border Background="{DynamicResource SwPanelBgBrush}" BorderBrush="{DynamicResource SwBorderBrush}" BorderThickness="1" CornerRadius="3" Margin="0,0,0,6">
                             <StackPanel>
-                                <Border Background="{StaticResource SwGroupHeaderBgBrush}" BorderBrush="{StaticResource SwBorderBrush}" BorderThickness="0,0,0,1" Padding="6,4">
+                                <Border Background="{DynamicResource SwGroupHeaderBgBrush}" BorderBrush="{DynamicResource SwBorderBrush}" BorderThickness="0,0,0,1" Padding="7,5">
                                     <Grid>
                                         <Grid.ColumnDefinitions>
                                             <ColumnDefinition Width="3"/>
                                             <ColumnDefinition Width="*"/>
                                             <ColumnDefinition Width="Auto"/>
+                                            <ColumnDefinition Width="Auto"/>
                                         </Grid.ColumnDefinitions>
-                                        <Border Grid.Column="0" Background="{StaticResource SwBlueBrush}"/>
-                                        <TextBlock Grid.Column="1" Text="2. Tabela Estruturada de Variações" FontSize="11" FontWeight="Bold" Foreground="{StaticResource SwTextDarkBrush}" VerticalAlignment="Center" Margin="6,0,0,0"/>
-                                        <StackPanel Grid.Column="2" Orientation="Horizontal">
+                                        <Border Grid.Column="0" Background="{DynamicResource SwBlueBrush}" CornerRadius="1"/>
+                                        <TextBlock Grid.Column="1" Text="2. Tabela de Variações" FontSize="11" FontWeight="Bold" Foreground="{DynamicResource SwTextDarkBrush}" VerticalAlignment="Center" Margin="7,0,0,0"/>
+                                        <Border Grid.Column="2" Background="{DynamicResource SwBadgeBgBrush}" CornerRadius="2" Padding="5,1" Margin="0,0,6,0" VerticalAlignment="Center">
+                                            <TextBlock Text="{Binding RowsCountText}" FontSize="9.5" FontWeight="SemiBold" Foreground="{DynamicResource SwTextHighlightBrush}"/>
+                                        </Border>
+                                        <StackPanel Grid.Column="3" Orientation="Horizontal">
                                             <Button Content="+ Linha" Style="{StaticResource SecondaryButton}" Command="{Binding AdicionarLinhaCommand}" Padding="6,1" Margin="0,0,3,0" FontSize="10"/>
                                             <Button Content="- Excluir" Style="{StaticResource SecondaryButton}" Command="{Binding RemoverLinhaCommand}" Padding="6,1" Margin="0,0,3,0" FontSize="10"/>
                                             <Button Content="Limpar" Style="{StaticResource SecondaryButton}" Command="{Binding LimparTabelaCommand}" Padding="6,1" FontSize="10"/>
@@ -593,29 +860,39 @@
                                     </Grid>
                                 </Border>
 
-                                <StackPanel Margin="8,7">
+                                <StackPanel Margin="8,8">
                                     <!-- Campo de Prefixo Global do Nome / SKU -->
-                                    <Grid Margin="0,0,0,6">
+                                    <Grid Margin="0,0,0,7">
                                         <Grid.ColumnDefinitions>
                                             <ColumnDefinition Width="Auto"/>
                                             <ColumnDefinition Width="*"/>
                                         </Grid.ColumnDefinitions>
-                                        <TextBlock Grid.Column="0" Text="Prefixo do Nome / SKU:" FontSize="10.5" FontWeight="SemiBold" Foreground="{StaticResource SwTextDarkBrush}" VerticalAlignment="Center" Margin="0,0,6,0"/>
+                                        <TextBlock Grid.Column="0" Text="Prefixo do Nome / SKU:" FontSize="10.5" FontWeight="SemiBold" Foreground="{DynamicResource SwTextDarkBrush}" VerticalAlignment="Center" Margin="0,0,7,0"/>
                                         <TextBox Grid.Column="1"
                                                  Text="{Binding SkuPrefix, UpdateSourceTrigger=PropertyChanged}"
-                                                 Height="23" FontSize="11"
-                                                 ToolTip="Adiciona este nome antes do SKU de todas as peças (ex: 'PARAFUSO SEXTAVADO' transforma 'm5 x 15' em 'PARAFUSO SEXTAVADO m5 x 15')."/>
+                                                 Height="24" FontSize="11"
+                                                 ToolTip="Adiciona este nome antes do SKU de todas as peças (ex: 'PARAFUSO ALLEN' transforma 'M5 x 15' em 'PARAFUSO ALLEN M5 x 15')."/>
                                     </Grid>
 
                                     <!-- DataGrid de Variações -->
-                                    <DataGrid x:Name="VariationsDataGrid" ItemsSource="{Binding Rows}" SelectedItem="{Binding SelectedRow}"
-                                              AutoGenerateColumns="False" CanUserAddRows="False" HeadersVisibility="Column"
+                                    <DataGrid x:Name="VariationsDataGrid"
+                                              ItemsSource="{Binding Rows}"
+                                              SelectedItem="{Binding SelectedRow}"
+                                              AutoGenerateColumns="False"
+                                              CanUserAddRows="False"
+                                              HeadersVisibility="Column"
                                               MinHeight="190" MaxHeight="340"
-                                              BorderBrush="#B8BABC" BorderThickness="1"
-                                              GridLinesVisibility="All" HorizontalGridLinesBrush="#DCDFE3" VerticalGridLinesBrush="#DCDFE3"
-                                              Background="#FFFFFF" AlternatingRowBackground="#F7F8FA"
-                                              HorizontalScrollBarVisibility="Auto" VerticalScrollBarVisibility="Auto"
-                                              RowHeight="23" FontSize="11">
+                                              BorderBrush="{DynamicResource SwInputBorderBrush}"
+                                              BorderThickness="1"
+                                              GridLinesVisibility="All"
+                                              HorizontalGridLinesBrush="{DynamicResource SwGridLinesBrush}"
+                                              VerticalGridLinesBrush="{DynamicResource SwGridLinesBrush}"
+                                              Background="{DynamicResource SwGridBgBrush}"
+                                              RowBackground="{DynamicResource SwGridBgBrush}"
+                                              AlternatingRowBackground="{DynamicResource SwGridAltRowBgBrush}"
+                                              HorizontalScrollBarVisibility="Auto"
+                                              VerticalScrollBarVisibility="Auto"
+                                              RowHeight="24" FontSize="11">
                                         <DataGrid.Columns>
                                             <DataGridTextColumn Header="SKU / Código" Binding="{Binding Sku}" FontWeight="SemiBold" Width="1.3*"/>
                                             <DataGridTextColumn Header="Status" Binding="{Binding StatusMessage}" IsReadOnly="True" Width="*"/>
@@ -626,16 +903,22 @@
                         </Border>
 
                         <!-- SEÇÃO 3: APROVAÇÃO E GERAÇÃO EM LOTE -->
-                        <Border Background="{StaticResource SwPanelBgBrush}" BorderBrush="{StaticResource SwBorderBrush}" BorderThickness="1" CornerRadius="2" Padding="8,6">
+                        <Border Background="{DynamicResource SwPanelBgBrush}" BorderBrush="{DynamicResource SwBorderBrush}" BorderThickness="1" CornerRadius="3" Padding="8,7">
                             <Grid>
                                 <Grid.ColumnDefinitions>
                                     <ColumnDefinition Width="*"/>
                                     <ColumnDefinition Width="Auto"/>
                                 </Grid.ColumnDefinitions>
-                                <Button Grid.Column="0" Content="✔ Aprovar e Gerar Biblioteca (.SLDPRT)" Style="{StaticResource SuccessButton}" 
-                                        Command="{Binding GerarBibliotecaCommand}" Height="30" FontSize="11.5" FontWeight="Bold" Margin="0,0,5,0"/>
-                                <Button Grid.Column="1" Content="Cancelar" Style="{StaticResource DangerButton}" 
-                                        Command="{Binding CancelarCommand}" Height="30" Width="68" FontSize="11"/>
+                                <Button Grid.Column="0"
+                                        Content="✔ Aprovar e Gerar Biblioteca (.SLDPRT)"
+                                        Style="{StaticResource SuccessButton}"
+                                        Command="{Binding GerarBibliotecaCommand}"
+                                        Height="31" FontSize="11.5" FontWeight="Bold" Margin="0,0,6,0"/>
+                                <Button Grid.Column="1"
+                                        Content="Cancelar"
+                                        Style="{StaticResource DangerButton}"
+                                        Command="{Binding CancelarCommand}"
+                                        Height="31" Width="70" FontSize="11"/>
                             </Grid>
                         </Border>
 
@@ -644,10 +927,27 @@
             </TabItem>
         </TabControl>
 
-        <!-- BARRA INFERIOR DE REGISTROS (CONSOLE TÉCNICO RETRÁTIL) -->
-        <Border Grid.Row="2" Background="#DFE2E6" BorderBrush="{StaticResource SwBorderBrush}" BorderThickness="1" CornerRadius="2" Margin="0,5,0,0">
-            <Expander Header="Console de Eventos do SolidWorks" IsExpanded="False" Foreground="#2B2B2B" FontSize="10.5" FontWeight="SemiBold" Padding="4,2">
-                <Border Background="#1E1E1E" BorderBrush="#333333" BorderThickness="1" Margin="0,4,0,2">
+        <!-- ========================================================================= -->
+        <!-- BARRA INFERIOR DE REGISTROS (CONSOLE TÉCNICO RETRÁTIL)                    -->
+        <!-- ========================================================================= -->
+        <Border Grid.Row="2"
+                Background="{DynamicResource SwHeaderBgBrush}"
+                BorderBrush="{DynamicResource SwBorderBrush}"
+                BorderThickness="1"
+                CornerRadius="3"
+                Margin="0,5,0,0">
+            <Expander IsExpanded="False"
+                      Foreground="{DynamicResource SwTextDarkBrush}"
+                      FontSize="10.5"
+                      FontWeight="SemiBold"
+                      Padding="5,3">
+                <Expander.Header>
+                    <StackPanel Orientation="Horizontal">
+                        <Image x:Name="ConsoleLogoImage" Width="15" Height="15" Margin="0,0,6,0" VerticalAlignment="Center" RenderOptions.BitmapScalingMode="HighQuality"/>
+                        <TextBlock Text="Console de Eventos do BiblioteCad" VerticalAlignment="Center"/>
+                    </StackPanel>
+                </Expander.Header>
+                <Border Background="#1B1B1B" BorderBrush="#3A3A3A" BorderThickness="1" CornerRadius="2" Margin="0,4,0,2">
                     <ListBox ItemsSource="{Binding Logs}" Height="110" Background="Transparent" BorderThickness="0" ScrollViewer.HorizontalScrollBarVisibility="Disabled" Padding="4">
                         <ListBox.ItemTemplate>
                             <DataTemplate>

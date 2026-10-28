@@ -1,4 +1,5 @@
 using System;
+using System.Collections.Generic;
 using System.IO;
 using System.Runtime.InteropServices;
 using AutoSolid.Core;
@@ -49,28 +50,25 @@ namespace AutoSolid.Services
         }
 
         /// <summary>
-        /// Inspeciona silenciosamente a seleção atual no SolidWorks (sem lançar exceção se nada estiver selecionado).
-        /// Suporta:
-        /// 1. Cotas de esboço (Sketch Dimensions) e Cotas de recursos 3D/Extrusão clicadas na tela (swSelDIMENSIONS).
-        /// 2. Recursos 3D (Extrusão, Corte, Revolução, etc.) clicados na árvore de projeto (swSelBODYFEATURES).
-        /// 3. Faces 3D de uma extrusão clicadas diretamente no modelo (swSelFACES -> Feature -> DisplayDimension).
+        /// Retorna todas as cotas/extrusões atualmente selecionadas no SolidWorks (executado na thread STA principal).
         /// </summary>
-        public DimensionMapping TryGetCurrentlySelectedDimension()
+        public List<DimensionMapping> TryGetCurrentlySelectedDimensions()
         {
+            var results = new List<DimensionMapping>();
             ModelDoc2 doc = GetActivePartDocument();
-            if (doc == null) return null;
+            if (doc == null) return results;
 
             SelectionMgr selMgr = null;
             try
             {
                 selMgr = (SelectionMgr)doc.SelectionManager;
-                if (selMgr == null) return null;
+                if (selMgr == null) return results;
 
                 int count = selMgr.GetSelectedObjectCount2(-1);
-                if (count <= 0) return null;
+                if (count <= 0) return results;
 
-                // 1ª Prioridade: Procura se algum objeto selecionado é diretamente uma Cota (Dimension de Sketch ou de Extrusão)
-                for (int i = count; i >= 1; i--)
+                // 1ª Prioridade: Cotas selecionadas diretamente na viewport (Sketch Dimensions ou Extrusion Dimensions)
+                for (int i = 1; i <= count; i++)
                 {
                     int selType = selMgr.GetSelectedObjectType3(i, -1);
                     if (selType == (int)swSelectType_e.swSelDIMENSIONS)
@@ -80,7 +78,10 @@ namespace AutoSolid.Services
                         {
                             dispDim = (DisplayDimension)selMgr.GetSelectedObject6(i, -1);
                             var mapping = ExtractMappingFromDisplayDimension(dispDim);
-                            if (mapping != null) return mapping;
+                            if (mapping != null)
+                            {
+                                results.Add(mapping);
+                            }
                         }
                         finally
                         {
@@ -90,7 +91,10 @@ namespace AutoSolid.Services
                     }
                 }
 
-                // 2ª Prioridade: Usuário clicou no recurso de Extrusão / Recurso 3D na árvore (swSelBODYFEATURES) ou Sketch (swSelSKETCHES)
+                if (results.Count > 0)
+                    return results;
+
+                // 2ª Prioridade: Recursos 3D (Extrusão, Corte, Revolução) ou Sketch clicados na árvore
                 for (int i = count; i >= 1; i--)
                 {
                     int selType = selMgr.GetSelectedObjectType3(i, -1);
@@ -101,7 +105,10 @@ namespace AutoSolid.Services
                         {
                             feat = (Feature)selMgr.GetSelectedObject6(i, -1);
                             var mapping = ExtractPrimaryDimensionFromFeature(feat);
-                            if (mapping != null) return mapping;
+                            if (mapping != null)
+                            {
+                                results.Add(mapping);
+                            }
                         }
                         finally
                         {
@@ -111,7 +118,10 @@ namespace AutoSolid.Services
                     }
                 }
 
-                // 3ª Prioridade: Usuário clicou em uma Face 3D de uma Extrusão na viewport (swSelFACES)
+                if (results.Count > 0)
+                    return results;
+
+                // 3ª Prioridade: Face 3D de uma extrusão clicada na viewport
                 for (int i = count; i >= 1; i--)
                 {
                     int selType = selMgr.GetSelectedObjectType3(i, -1);
@@ -126,7 +136,10 @@ namespace AutoSolid.Services
                             {
                                 feat = (Feature)face.GetFeature();
                                 var mapping = ExtractPrimaryDimensionFromFeature(feat);
-                                if (mapping != null) return mapping;
+                                if (mapping != null)
+                                {
+                                    results.Add(mapping);
+                                }
                             }
                         }
                         finally
@@ -139,17 +152,26 @@ namespace AutoSolid.Services
                     }
                 }
 
-                return null;
+                return results;
             }
             catch
             {
-                return null;
+                return results;
             }
             finally
             {
                 object objSelMgr = selMgr;
                 ComReleaseHelper.Release(ref objSelMgr);
             }
+        }
+
+        /// <summary>
+        /// Inspeciona silenciosamente a seleção atual no SolidWorks e retorna a cota mais recente.
+        /// </summary>
+        public DimensionMapping TryGetCurrentlySelectedDimension()
+        {
+            var list = TryGetCurrentlySelectedDimensions();
+            return list.Count > 0 ? list[list.Count - 1] : null;
         }
 
         private DimensionMapping ExtractPrimaryDimensionFromFeature(Feature feat)

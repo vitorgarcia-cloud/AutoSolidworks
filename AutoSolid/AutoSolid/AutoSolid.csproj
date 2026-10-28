@@ -105,6 +105,13 @@
     </Page>
   </ItemGroup>
   <ItemGroup>
+    <!-- Assets e Ícones Oficiais do BiblioteCad -->
+    <Content Include="Assets\BiblioteCadLogo.png">
+      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+    </Content>
+    <Content Include="Assets\BiblioteCadTaskpane20.bmp">
+      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+    </Content>
     <None Include="App.config" />
   </ItemGroup>
   <Import Project="$(MSBuildToolsPath)\Microsoft.CSharp.targets" />

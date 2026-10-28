@@ -23,7 +23,7 @@ namespace AutoSolid.Services
             ServicePointManager.SecurityProtocol |= SecurityProtocolType.Tls12 | (SecurityProtocolType)3072 | (SecurityProtocolType)12288;
             _httpClient = new HttpClient
             {
-                Timeout = TimeSpan.FromSeconds(120)
+                Timeout = TimeSpan.FromSeconds(240)
             };
         }
 
@@ -96,7 +96,8 @@ namespace AutoSolid.Services
 
         /// <summary>
         /// Extrai linhas paramétricas de um arquivo PDF, imagem ou texto usando Gemini multimodal.
-        /// Possui auto-fallback de modelo (caso dê 404 na conta gratuita) e auto-fallback de schema (caso dê 400).
+        /// Possui auto-fallback de modelo (caso dê 404 na conta gratuita), auto-fallback de schema (caso dê 400)
+        /// e continuação automática em múltiplas etapas caso uma tabela grande pare antes do último item ou atinja o limite de tokens.
         /// </summary>
         public async Task<List<ParametricRow>> ExtractDataAsync(
             string filePath,
@@ -141,13 +142,21 @@ namespace AutoSolid.Services
                 string currentModel = candidateModels[i];
                 onProgress?.Invoke(25 + Math.Min(i * 10, 30), $"Conectando ao Gemini ({currentModel})...");
 
-                // 1ª tentativa no modelo atual: Com Structured Output (JSON Schema)
-                var result = await TryGenerateContentAsync(
-                    currentModel, cleanKey, mimeType, base64Data, filePath, mappings, useStrictSchema: true, onProgress, userInstructions);
+                // 1ª tentativa no modelo atual: Com Structured Output (JSON Schema) e limite alto de tokens (65536)
+                var result = await TryGenerateWithContinuationAsync(
+                    currentModel, cleanKey, mimeType, base64Data, filePath, mappings, useStrictSchema: true, maxTokens: 65536, onProgress, userInstructions);
+
+                // Se falhou por maxOutputTokens (modelos mais antigos que aceitam máx 8192), tenta com 8192 mantendo o schema
+                if (!result.Success && result.StatusCode == HttpStatusCode.BadRequest &&
+                    result.ErrorMessage != null && result.ErrorMessage.IndexOf("maxOutputTokens", StringComparison.OrdinalIgnoreCase) >= 0)
+                {
+                    result = await TryGenerateWithContinuationAsync(
+                        currentModel, cleanKey, mimeType, base64Data, filePath, mappings, useStrictSchema: true, maxTokens: 8192, onProgress, userInstructions);
+                }
 
                 if (result.Success)
                 {
-                    onProgress?.Invoke(92, $"Dados recebidos via {currentModel}! Montando tabela...");
+                    onProgress?.Invoke(92, $"Dados recebidos via {currentModel} ({result.Rows.Count} variações)! Montando tabela...");
                     return result.Rows;
                 }
 
@@ -155,12 +164,22 @@ namespace AutoSolid.Services
                 if (result.StatusCode == HttpStatusCode.BadRequest && !result.ErrorMessage.Contains("API_KEY_INVALID"))
                 {
                     onProgress?.Invoke(50, $"Ajustando formato JSON para {currentModel}...");
-                    var retryCompat = await TryGenerateContentAsync(
-                        currentModel, cleanKey, mimeType, base64Data, filePath, mappings, useStrictSchema: false, onProgress, userInstructions);
+                    int fallbackTokens = (result.ErrorMessage != null && result.ErrorMessage.IndexOf("maxOutputTokens", StringComparison.OrdinalIgnoreCase) >= 0)
+                        ? 8192
+                        : 65536;
+
+                    var retryCompat = await TryGenerateWithContinuationAsync(
+                        currentModel, cleanKey, mimeType, base64Data, filePath, mappings, useStrictSchema: false, maxTokens: fallbackTokens, onProgress, userInstructions);
+
+                    if (!retryCompat.Success && retryCompat.StatusCode == HttpStatusCode.BadRequest && fallbackTokens > 8192)
+                    {
+                        retryCompat = await TryGenerateWithContinuationAsync(
+                            currentModel, cleanKey, mimeType, base64Data, filePath, mappings, useStrictSchema: false, maxTokens: 8192, onProgress, userInstructions);
+                    }
 
                     if (retryCompat.Success)
                     {
-                        onProgress?.Invoke(92, $"Dados recebidos via {currentModel}! Montando tabela...");
+                        onProgress?.Invoke(92, $"Dados recebidos via {currentModel} ({retryCompat.Rows.Count} variações)! Montando tabela...");
                         return retryCompat.Rows;
                     }
                     lastError = retryCompat.ErrorMessage;
@@ -218,6 +237,145 @@ namespace AutoSolid.Services
             public HttpStatusCode StatusCode { get; set; }
             public string ErrorMessage { get; set; }
             public List<ParametricRow> Rows { get; set; }
+            public bool HitMaxTokensOrTruncated { get; set; }
+            public bool IsTableComplete { get; set; }
+            public string ExpectedLastItem { get; set; }
+        }
+
+        /// <summary>
+        /// Executa a extração inicial e, caso a tabela seja grande e pare antes do último item (ex: parou no M8 quando a tabela vai até M36),
+        /// solicita automaticamente a continuação a partir do último SKU extraído até listar 100% da tabela.
+        /// </summary>
+        private async Task<AttemptResult> TryGenerateWithContinuationAsync(
+            string model,
+            string apiKey,
+            string mimeType,
+            string base64Data,
+            string filePath,
+            IList<DimensionMapping> mappings,
+            bool useStrictSchema,
+            int maxTokens,
+            Action<double, string> onProgress,
+            string userInstructions = null)
+        {
+            var firstPass = await TryGenerateContentAsync(
+                model, apiKey, mimeType, base64Data, filePath, mappings, useStrictSchema, maxTokens, onProgress, userInstructions,
+                continuationAfterSku: null, expectedLastItemHint: null);
+
+            if (!firstPass.Success || firstPass.Rows == null || firstPass.Rows.Count == 0)
+                return firstPass;
+
+            var allRows = new List<ParametricRow>(firstPass.Rows);
+            var seenSkus = new HashSet<string>(allRows.Select(r => NormalizeSkuKey(r.Sku)), StringComparer.OrdinalIgnoreCase);
+
+            string expectedLastItem = firstPass.ExpectedLastItem;
+            bool needsContinuation = ShouldContinueExtraction(firstPass, allRows.Last().Sku, expectedLastItem);
+
+            int continuationPass = 1;
+            const int maxContinues = 8;
+
+            while (needsContinuation && continuationPass <= maxContinues)
+            {
+                string lastSku = allRows.Last().Sku;
+                string targetLabel = !string.IsNullOrWhiteSpace(expectedLastItem) ? $" até {expectedLastItem}" : "";
+                onProgress?.Invoke(
+                    Math.Min(62 + continuationPass * 4, 90),
+                    $"Tabela extensa ({allRows.Count} itens extraídos até '{lastSku}'). Continuando extração{targetLabel} (etapa {continuationPass + 1})...");
+
+                var nextPass = await TryGenerateContentAsync(
+                    model, apiKey, mimeType, base64Data, filePath, mappings, useStrictSchema, maxTokens, onProgress, userInstructions,
+                    continuationAfterSku: lastSku, expectedLastItemHint: expectedLastItem);
+
+                if (!nextPass.Success || nextPass.Rows == null || nextPass.Rows.Count == 0)
+                    break;
+
+                if (string.IsNullOrWhiteSpace(expectedLastItem) && !string.IsNullOrWhiteSpace(nextPass.ExpectedLastItem))
+                {
+                    expectedLastItem = nextPass.ExpectedLastItem;
+                }
+
+                int addedInThisPass = 0;
+                foreach (var row in nextPass.Rows)
+                {
+                    string key = NormalizeSkuKey(row.Sku);
+                    if (!string.IsNullOrEmpty(key) && !seenSkus.Contains(key))
+                    {
+                        seenSkus.Add(key);
+                        allRows.Add(row);
+                        addedInThisPass++;
+                    }
+                }
+
+                if (addedInThisPass == 0)
+                    break;
+
+                needsContinuation = ShouldContinueExtraction(nextPass, allRows.Last().Sku, expectedLastItem);
+                continuationPass++;
+            }
+
+            firstPass.Rows = allRows;
+            return firstPass;
+        }
+
+        private bool ShouldContinueExtraction(AttemptResult passResult, string currentLastSku, string expectedLastItem)
+        {
+            if (passResult == null) return false;
+            if (passResult.HitMaxTokensOrTruncated) return true;
+            if (!passResult.IsTableComplete) return true;
+
+            if (!string.IsNullOrWhiteSpace(expectedLastItem) && !string.IsNullOrWhiteSpace(currentLastSku))
+            {
+                if (!HasReachedExpectedLastItem(currentLastSku, expectedLastItem))
+                {
+                    return true;
+                }
+            }
+
+            return false;
+        }
+
+        /// <summary>
+        /// Verifica se o último SKU extraído já chegou na última coluna/linha real da tabela informada pela IA.
+        /// Exemplo: se currentLastSku = "M8 x 120" e expectedLastItem = "M36 x 180" (ou "M-36"), retorna false para forçar a continuação.
+        /// </summary>
+        private bool HasReachedExpectedLastItem(string currentLastSku, string expectedLastItem)
+        {
+            string normCurrent = NormalizeSkuKey(currentLastSku);
+            string normExpected = NormalizeSkuKey(expectedLastItem);
+
+            if (string.IsNullOrEmpty(normExpected) || string.IsNullOrEmpty(normCurrent))
+                return true;
+
+            if (normCurrent == normExpected || normCurrent.Contains(normExpected) || normExpected.Contains(normCurrent))
+                return true;
+
+            // Compara os números presentes no identificador final esperado (ex: ["36", "180"] ou ["36"])
+            var expectedNumbers = Regex.Matches(expectedLastItem, @"\d+(?:[\.,]\d+)?")
+                .Cast<Match>()
+                .Select(m => m.Value.Replace(",", "."))
+                .ToList();
+
+            var currentNumbers = Regex.Matches(currentLastSku, @"\d+(?:[\.,]\d+)?")
+                .Cast<Match>()
+                .Select(m => m.Value.Replace(",", "."))
+                .ToList();
+
+            if (expectedNumbers.Count > 0 && currentNumbers.Count > 0)
+            {
+                // O primeiro número geralmente identifica a coluna/diâmetro principal (ex: M4 vs M8 vs M36)
+                if (expectedNumbers[0] != currentNumbers[0])
+                {
+                    return false;
+                }
+            }
+
+            return true;
+        }
+
+        private string NormalizeSkuKey(string sku)
+        {
+            if (string.IsNullOrWhiteSpace(sku)) return string.Empty;
+            return Regex.Replace(sku.Trim(), @"[\s\-_]+", "").ToUpperInvariant();
         }
 
         private async Task<AttemptResult> TryGenerateContentAsync(
@@ -228,8 +386,11 @@ namespace AutoSolid.Services
             string filePath,
             IList<DimensionMapping> mappings,
             bool useStrictSchema,
+            int maxTokens,
             Action<double, string> onProgress,
-            string userInstructions = null)
+            string userInstructions = null,
+            string continuationAfterSku = null,
+            string expectedLastItemHint = null)
         {
             var dimensionAliases = mappings
                 .Select(m => string.IsNullOrWhiteSpace(m.Alias) ? m.FullName : m.Alias)
@@ -241,12 +402,30 @@ namespace AutoSolid.Services
                 return $"- Apelido (IA): \"{alias}\" | Cota/Sketch original no SolidWorks: \"{m.FullName}\" | Medida de referência na peça-template atual: {m.CurrentValueMm:F2} mm";
             }));
 
-            string exampleJson = "{\"SKU\": \"MODELO_01\", " + string.Join(", ", dimensionAliases.Select(a => $"\"{a}\": 10.0")) + "}";
+            string exampleItemJson = "{\"SKU\": \"MODELO_01\", " + string.Join(", ", dimensionAliases.Select(a => $"\"{a}\": 10.0")) + "}";
+            string exampleWrapperJson =
+                "{\n" +
+                "  \"ultimo_item_da_tabela\": \"ULTIMO_SKU_DA_ULTIMA_COLUNA_E_LINHA\",\n" +
+                "  \"tabela_totalmente_extraida\": true,\n" +
+                $"  \"itens\": [{exampleItemJson}]\n" +
+                "}";
 
             string userPromptSection = string.IsNullOrWhiteSpace(userInstructions)
                 ? string.Empty
                 : "\nINSTRUÇÕES ESPECÍFICAS DO USUÁRIO (PRIORIDADE MÁXIMA):\n" +
                   $"{userInstructions.Trim()}\n";
+
+            string continuationSection = string.IsNullOrWhiteSpace(continuationAfterSku)
+                ? string.Empty
+                : "\n====================================================================\n" +
+                  "ATENÇÃO — MODO DE CONTINUAÇÃO DE TABELA GRANDE (ETAPA COMPLEMENTAR):\n" +
+                  $"Na etapa anterior, a extração parou exatamente no item de SKU \"{continuationAfterSku}\".\n" +
+                  (!string.IsNullOrWhiteSpace(expectedLastItemHint)
+                      ? $"O último item real da tabela é \"{expectedLastItemHint}\".\n"
+                      : "") +
+                  $"Sua tarefa AGORA é CONTINUAR a extração EXATAMENTE a partir do próximo item/coluna/linha imediatamente após \"{continuationAfterSku}\" e prosseguir sem pular nenhum item até o final completo da tabela.\n" +
+                  $"NÃO repita os itens anteriores ou iguais a \"{continuationAfterSku}\".\n" +
+                  "====================================================================\n";
 
             string promptText =
                 "Você é um Engenheiro Mecânico Sênior e Especialista em CAD/SolidWorks capaz de interpretar catálogos, tabelas dimensionais e desenhos técnicos de QUALQUER componente mecânico (arruelas, anéis de vedação/borrachas, cubos, rodas, pneus, eixos, flanges, buchas, parafusos de diversos tipos, porcas, perfis estruturais, etc.).\n\n" +
@@ -255,18 +434,30 @@ namespace AutoSolid.Services
                 "COTAS E APELIDOS DEFINIDOS PELO USUÁRIO NA PEÇA-TEMPLATE:\n" +
                 $"{mappingsContextLines}\n\n" +
                 "DIRETRIZES DE ASSOCIAÇÃO INTELIGENTE (GENERALISTA):\n" +
-                "1. O usuário definiu na coluna 'Apelido (IA)' nomes que podem ser termos usuais (ex: 'D_EXT', 'DIAM_INT', 'FURO', 'ESPESSURA', 'LARGURA', 'ALTURA', 'RAIO', 'CUBO', 'BANDA', 'CHAVE', 'PASSO', 'COMPRIMENTO') ou diretamente as letras/símbolos que aparecem no desenho ou cabeçalho da tabela (ex: 'd', 'd1', 'd2', 'D', 'B', 's', 'h', 'k', 'L', 't', 'e', 'W').\n" +
+                "1. O usuário definiu na coluna 'Apelido (IA)' nomes que podem ser termos usuais (ex: 'D_EXT', 'DIAM_INT', 'FURO', 'ESPESSURA', 'LARGURA', 'ALTURA', 'RAIO', 'CUBO', 'BANDA', 'CHAVE', 'PASSO', 'COMPRIMENTO') ou diretamente as letras/símbolos que aparecem no desenho ou cabeçalho da tabela (ex: 'd', 'd1', 'd2', 'D', 'B', 's', 'h', 'k', 'L', 't', 'e', 'W', 'b').\n" +
                 "2. Inspecione visualmente o desenho esquemático (se houver na imagem/PDF) para identificar qual letra ou símbolo aponta para qual geometria da peça e cruze essa informação com as colunas/linhas da tabela.\n" +
                 "3. Utilize tanto o 'Apelido (IA)' quanto o nome original do Sketch/Cota e a medida de referência da peça-template como contexto para entender exatamente o que cada cota representa na geometria.\n" +
-                "4. Caso alguma medida solicitada pelo usuário seja fixa no desenho ou não varie na tabela, preencha com o valor constante indicado no documento ou mantenha a medida de referência da peça-template.\n" +
+                "4. Caso alguma medida solicitada pelo usuário seja fixa no desenho ou não varie na tabela, preencha com o valor constante indicado no documento ou mantenha a medida de referência da peça-template.\n\n" +
+                "REGRA CRÍTICA — EXTRAÇÃO 100% COMPLETA E EXAUSTIVA (PROIBIDO PARAR ANTES DO FINAL DA TABELA):\n" +
+                "1. Antes de gerar a lista 'itens', identifique qual é o ÚLTIMO item/coluna/linha da tabela inteira (na extrema direita e na última linha inferior) e preencha o campo 'ultimo_item_da_tabela' (ex: se a tabela vai de M-4 até M-36 no comprimento 180, o 'ultimo_item_da_tabela' é 'M36 x 180' ou 'M36').\n" +
+                "2. Você DEVE listar ABSOLUTAMENTE TODOS os itens, linhas e colunas presentes na tabela, do primeiro até o 'ultimo_item_da_tabela', independentemente do tamanho da tabela.\n" +
+                "3. JAMAIS interrompa a listagem na metade (por exemplo: se uma tabela tem colunas de M-4 até M-36, você DEVE extrair TODAS as colunas M-4, M-5, M-6, M-8, M-10, M-12, M-14, M-16, M-18, M-20, M-22, M-24, M-27, M-30 e M-36! Nunca pare no M8 ou em qualquer coluna intermediária).\n" +
+                "4. SUPORTE A TODOS OS FORMATOS DE TABELA:\n" +
+                "   - TABELA EM LINHAS (Vertical): Cada linha é uma variação. Extraia da primeira até a última linha.\n" +
+                "   - TABELA EM COLUNAS (Horizontal): Cada coluna é um modelo/diâmetro (ex: M-4 a M-36) e as medidas estão nas linhas. Extraia da primeira coluna à esquerda até a última coluna à direita.\n" +
+                "   - TABELA MATRIZ / CRUZADA 2D (ex: Colunas no topo com Diâmetros/Modelos e medidas de cabeçalho, cruzadas com Linhas abaixo de Comprimento 'L' onde as células preenchidas indicam combinações válidas):\n" +
+                "     * Se o usuário mapeou a cota que varia nas linhas da matriz (ex: Comprimento 'L') além das cotas das colunas: gere um item para CADA combinação válida (célula preenchida/não-vazia) cruzando cada coluna (da 1ª até a última coluna na extrema direita) com cada linha válida (ex: 'M4 x 10', 'M4 x 12'... passando por todas as colunas até 'M36 x 180'). Ignore apenas células em branco na matriz.\n" +
+                "     * Se o usuário NÃO mapeou a cota das linhas da matriz (mapeou apenas cotas do cabeçalho das colunas): gere um item por coluna, da primeira até a última coluna (ex: 'M4' até 'M36').\n" +
+                "5. Defina 'tabela_totalmente_extraida' como true SOMENTE quando o último item incluído no array 'itens' for realmente o 'ultimo_item_da_tabela'. Se por limite de espaço ainda faltarem colunas/linhas, defina 'tabela_totalmente_extraida' como false.\n" +
+                continuationSection +
                 userPromptSection + "\n" +
                 "REGRAS DE FORMATAÇÃO E UNIDADES:\n" +
-                "1. O campo 'SKU' deve conter o nome, código ou especificação de cada variação/modelo listado na tabela.\n" +
-                "2. As chaves do JSON DEVEM SER EXATAMENTE OS APELIDOS (IA) FORNECIDOS PELO USUÁRIO: " + string.Join(", ", dimensionAliases) + ".\n" +
+                "1. O campo 'SKU' deve conter o nome, código ou especificação de cada variação/modelo listado na tabela (ex: 'M4 x 10', 'M36 x 180', 'M12', etc.).\n" +
+                "2. As chaves de cada item em 'itens' DEVEM SER EXATAMENTE 'SKU' e OS APELIDOS (IA) FORNECIDOS PELO USUÁRIO: " + string.Join(", ", dimensionAliases) + ".\n" +
                 "3. Todos os valores das cotas devem ser números reais (float/double) convertidos para MILÍMETROS (mm), usando ponto decimal (ex: 12.5, 6.0, 3.65). Se a tabela estiver em polegadas (ex: '1/4\"' ou '0.5\"'), converta para milímetros (1 pol = 25.4 mm).\n" +
                 "4. NUNCA inclua letras, símbolos ou unidades ('mm', 'pol', 'M', 'Ø') dentro dos campos numéricos das cotas.\n\n" +
-                $"Exemplo do formato JSON obrigatório:\n[{exampleJson}]\n" +
-                "Retorne ESTRITAMENTE o array JSON puro, sem comentários e sem blocos markdown.";
+                $"Formato JSON obrigatório:\n{exampleWrapperJson}\n" +
+                "Retorne ESTRITAMENTE o JSON puro, sem comentários e sem blocos markdown.";
 
             var partsList = new List<object>();
 
@@ -299,40 +490,59 @@ namespace AutoSolid.Services
             var generationConfig = new Dictionary<string, object>
             {
                 ["temperature"] = 0.1,
+                ["maxOutputTokens"] = maxTokens,
                 ["responseMimeType"] = "application/json"
             };
 
             if (useStrictSchema)
             {
-                var propertiesSchema = new Dictionary<string, object>
+                var itemPropertiesSchema = new Dictionary<string, object>
                 {
                     ["SKU"] = new Dictionary<string, object>
                     {
                         ["type"] = "STRING",
-                        ["description"] = "Código do produto ou identificador único da peça."
+                        ["description"] = "Código do produto ou identificador único da variação (ex: M4 x 10)."
                     }
                 };
 
-                var requiredFields = new List<string> { "SKU" };
+                var requiredItemFields = new List<string> { "SKU" };
                 foreach (var alias in dimensionAliases)
                 {
-                    propertiesSchema[alias] = new Dictionary<string, object>
+                    itemPropertiesSchema[alias] = new Dictionary<string, object>
                     {
                         ["type"] = "NUMBER",
                         ["description"] = $"Medida '{alias}' em milímetros (mm)."
                     };
-                    requiredFields.Add(alias);
+                    requiredItemFields.Add(alias);
                 }
 
                 generationConfig["responseSchema"] = new Dictionary<string, object>
                 {
-                    ["type"] = "ARRAY",
-                    ["items"] = new Dictionary<string, object>
+                    ["type"] = "OBJECT",
+                    ["properties"] = new Dictionary<string, object>
                     {
-                        ["type"] = "OBJECT",
-                        ["properties"] = propertiesSchema,
-                        ["required"] = requiredFields
-                    }
+                        ["ultimo_item_da_tabela"] = new Dictionary<string, object>
+                        {
+                            ["type"] = "STRING",
+                            ["description"] = "SKU da última coluna e última linha existente no final da tabela inteira."
+                        },
+                        ["tabela_totalmente_extraida"] = new Dictionary<string, object>
+                        {
+                            ["type"] = "BOOLEAN",
+                            ["description"] = "True somente se todos os itens até o ultimo_item_da_tabela foram incluídos nesta resposta."
+                        },
+                        ["itens"] = new Dictionary<string, object>
+                        {
+                            ["type"] = "ARRAY",
+                            ["items"] = new Dictionary<string, object>
+                            {
+                                ["type"] = "OBJECT",
+                                ["properties"] = itemPropertiesSchema,
+                                ["required"] = requiredItemFields
+                            }
+                        }
+                    },
+                    ["required"] = new List<string> { "ultimo_item_da_tabela", "tabela_totalmente_extraida", "itens" }
                 };
             }
 
@@ -352,7 +562,10 @@ namespace AutoSolid.Services
             string jsonPayload = _serializer.Serialize(requestBody);
             string url = $"https://generativelanguage.googleapis.com/v1beta/models/{model}:generateContent?key={apiKey}";
 
-            onProgress?.Invoke(60, $"Aguardando resposta da IA ({model})...");
+            if (string.IsNullOrWhiteSpace(continuationAfterSku))
+            {
+                onProgress?.Invoke(60, $"Aguardando resposta da IA ({model})...");
+            }
 
             using (var content = new StringContent(jsonPayload, Encoding.UTF8, "application/json"))
             {
@@ -371,12 +584,24 @@ namespace AutoSolid.Services
 
                 try
                 {
-                    var rows = ParseGeminiResponse(responseString, dimensionAliases);
+                    bool hitMaxTokensOrTruncated;
+                    bool isTableComplete;
+                    string expectedLastItem;
+                    var rows = ParseGeminiResponse(
+                        responseString,
+                        dimensionAliases,
+                        out hitMaxTokensOrTruncated,
+                        out isTableComplete,
+                        out expectedLastItem);
+
                     return new AttemptResult
                     {
                         Success = true,
                         StatusCode = response.StatusCode,
-                        Rows = rows
+                        Rows = rows,
+                        HitMaxTokensOrTruncated = hitMaxTokensOrTruncated,
+                        IsTableComplete = isTableComplete,
+                        ExpectedLastItem = expectedLastItem
                     };
                 }
                 catch (Exception ex)
@@ -391,8 +616,16 @@ namespace AutoSolid.Services
             }
         }
 
-        private List<ParametricRow> ParseGeminiResponse(string responseJson, IList<string> aliases)
+        private List<ParametricRow> ParseGeminiResponse(
+            string responseJson,
+            IList<string> aliases,
+            out bool hitMaxTokensOrTruncated,
+            out bool isTableComplete,
+            out string expectedLastItem)
         {
+            hitMaxTokensOrTruncated = false;
+            isTableComplete = true;
+            expectedLastItem = null;
             var resultList = new List<ParametricRow>();
 
             var rootObj = _serializer.Deserialize<Dictionary<string, object>>(responseJson);
@@ -407,6 +640,17 @@ namespace AutoSolid.Services
             if (firstCandidate == null || !firstCandidate.ContainsKey("content"))
                 throw new Exception("Candidato da IA não contém conteúdo.");
 
+            if (firstCandidate.ContainsKey("finishReason"))
+            {
+                string finishReason = firstCandidate["finishReason"]?.ToString() ?? "";
+                if (finishReason.IndexOf("MAX_TOKENS", StringComparison.OrdinalIgnoreCase) >= 0 ||
+                    finishReason.IndexOf("LENGTH", StringComparison.OrdinalIgnoreCase) >= 0)
+                {
+                    hitMaxTokensOrTruncated = true;
+                    isTableComplete = false;
+                }
+            }
+
             var contentObj = firstCandidate["content"] as Dictionary<string, object>;
             var parts = contentObj["parts"] as System.Collections.ArrayList;
             if (parts == null || parts.Count == 0)
@@ -420,27 +664,20 @@ namespace AutoSolid.Services
 
             rawOutputJson = CleanMarkdownJson(rawOutputJson);
 
-            System.Collections.ArrayList rowsArray = null;
+            // Extrai metadados de controle mesmo se o JSON tiver sido cortado no final
+            var lastItemMatch = Regex.Match(rawOutputJson, "\"ultimo_item_da_tabela\"\\s*:\\s*\"([^\"]+)\"");
+            if (lastItemMatch.Success)
+            {
+                expectedLastItem = lastItemMatch.Groups[1].Value.Trim();
+            }
 
-            if (rawOutputJson.StartsWith("["))
+            var completeMatch = Regex.Match(rawOutputJson, "\"tabela_totalmente_extraida\"\\s*:\\s*(true|false)", RegexOptions.IgnoreCase);
+            if (completeMatch.Success)
             {
-                rowsArray = _serializer.Deserialize<System.Collections.ArrayList>(rawOutputJson);
+                isTableComplete = string.Equals(completeMatch.Groups[1].Value, "true", StringComparison.OrdinalIgnoreCase);
             }
-            else if (rawOutputJson.StartsWith("{"))
-            {
-                var wrapperObj = _serializer.Deserialize<Dictionary<string, object>>(rawOutputJson);
-                if (wrapperObj != null)
-                {
-                    foreach (var val in wrapperObj.Values)
-                    {
-                        if (val is System.Collections.ArrayList arr)
-                        {
-                            rowsArray = arr;
-                            break;
-                        }
-                    }
-                }
-            }
+
+            System.Collections.ArrayList rowsArray = DeserializeRowsWithAutoRepair(rawOutputJson, ref hitMaxTokensOrTruncated, ref isTableComplete);
 
             if (rowsArray == null) return resultList;
 
@@ -479,6 +716,76 @@ namespace AutoSolid.Services
             }
 
             return resultList;
+        }
+
+        /// <summary>
+        /// Desserializa o JSON retornado pela IA. Se o JSON tiver sido cortado no final por limite de tokens,
+        /// repara automaticamente fechando no último objeto completo '}' para não perder os itens extraídos.
+        /// </summary>
+        private System.Collections.ArrayList DeserializeRowsWithAutoRepair(string rawOutputJson, ref bool wasTruncated, ref bool isTableComplete)
+        {
+            try
+            {
+                if (rawOutputJson.StartsWith("["))
+                {
+                    return _serializer.Deserialize<System.Collections.ArrayList>(rawOutputJson);
+                }
+                else if (rawOutputJson.StartsWith("{"))
+                {
+                    var wrapperObj = _serializer.Deserialize<Dictionary<string, object>>(rawOutputJson);
+                    if (wrapperObj != null)
+                    {
+                        if (wrapperObj.ContainsKey("tabela_totalmente_extraida") && wrapperObj["tabela_totalmente_extraida"] is bool bComplete)
+                        {
+                            isTableComplete = bComplete;
+                        }
+
+                        if (wrapperObj.ContainsKey("itens") && wrapperObj["itens"] is System.Collections.ArrayList itensArr)
+                        {
+                            return itensArr;
+                        }
+
+                        foreach (var val in wrapperObj.Values)
+                        {
+                            if (val is System.Collections.ArrayList arr)
+                            {
+                                return arr;
+                            }
+                        }
+                    }
+                }
+            }
+            catch
+            {
+                // O JSON foi truncado no meio de um objeto quando atingiu maxOutputTokens.
+                wasTruncated = true;
+                isTableComplete = false;
+                string repaired = RepairTruncatedJsonArray(rawOutputJson);
+                if (!string.IsNullOrEmpty(repaired))
+                {
+                    return _serializer.Deserialize<System.Collections.ArrayList>(repaired);
+                }
+                throw;
+            }
+
+            return null;
+        }
+
+        private string RepairTruncatedJsonArray(string rawJson)
+        {
+            if (string.IsNullOrWhiteSpace(rawJson)) return null;
+
+            int firstBracket = rawJson.IndexOf('[');
+            if (firstBracket < 0) return null;
+
+            int lastCompleteObjectEnd = rawJson.LastIndexOf('}');
+            if (lastCompleteObjectEnd <= firstBracket) return null;
+
+            string candidate = rawJson.Substring(firstBracket, lastCompleteObjectEnd - firstBracket + 1).TrimEnd();
+            if (candidate.EndsWith(","))
+                candidate = candidate.Substring(0, candidate.Length - 1);
+
+            return candidate + "]";
         }
 
         private static readonly Dictionary<string, string[]> CommonSynonyms = new Dictionary<string, string[]>(StringComparer.OrdinalIgnoreCase)
@@ -544,7 +851,7 @@ namespace AutoSolid.Services
             {
                 if (!string.IsNullOrWhiteSpace(sku))
                 {
-                    var match = Regex.Match(sku, @"[Mm]\s*(\d+(?:[\.,]\d+)?)");
+                    var match = Regex.Match(sku, @"[Mm]\s*[\-\s]*(\d+(?:[\.,]\d+)?)");
                     if (match.Success)
                     {
                         if (double.TryParse(match.Groups[1].Value.Replace(",", "."), System.Globalization.NumberStyles.Any, System.Globalization.CultureInfo.InvariantCulture, out double dVal))
@@ -553,9 +860,18 @@ namespace AutoSolid.Services
                 }
             }
 
-            // 4. Fallback especial para Comprimento se não estiver no dict (adota padrão nominal seguro)
+            // 4. Fallback especial para Comprimento a partir do SKU (ex: "M4 x 16" -> 16.0) ou padrão nominal
             if (normalizedAlias.Contains("COMP") || normalizedAlias == "L")
             {
+                if (!string.IsNullOrWhiteSpace(sku))
+                {
+                    var compMatch = Regex.Match(sku, @"[xX×]\s*(\d+(?:[\.,]\d+)?)");
+                    if (compMatch.Success)
+                    {
+                        if (double.TryParse(compMatch.Groups[1].Value.Replace(",", "."), System.Globalization.NumberStyles.Any, System.Globalization.CultureInfo.InvariantCulture, out double lVal))
+                            return lVal;
+                    }
+                }
                 return 25.0; // Comprimento padrão de 25mm para não deixar peça com geometria zerada
             }
 

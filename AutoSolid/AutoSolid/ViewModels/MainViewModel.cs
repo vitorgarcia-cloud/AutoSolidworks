@@ -7,6 +7,7 @@ using System.Linq;
 using System.Threading;
 using System.Threading.Tasks;
 using System.Windows.Forms;
+using System.Windows.Threading;
 using AutoSolid.Core;
 using AutoSolid.Models;
 using AutoSolid.Services;
@@ -21,6 +22,7 @@ namespace AutoSolid.ViewModels
         private readonly LibraryBatchEngine _batchEngine;
         private readonly UserSettingsService _settingsService;
         private readonly AppSettingsData _settingsData;
+        private readonly Dispatcher _uiDispatcher;
 
         private CancellationTokenSource _cts;
 
@@ -29,12 +31,14 @@ namespace AutoSolid.ViewModels
         private string _inputFilePath = string.Empty;
         private string _apiKey = string.Empty;
         private bool _isApiKeyLocked = false;
+        private bool _isDarkMode = true;
         private string _userInstructions = string.Empty;
         private string _skuPrefix = string.Empty;
 
         private bool _isSelectingDimension = false;
         private DimensionMapping _pendingDimension = null;
-        private CancellationTokenSource _selectionPollCts;
+        private DispatcherTimer _selectionTimer;
+        private readonly HashSet<string> _previousSelectionSet = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
 
         private string _selectedProvider = "Google Gemini";
         private string _selectedModel = "gemini-3.8-flash";
@@ -53,14 +57,20 @@ namespace AutoSolid.ViewModels
         public MainViewModel(SwAutomationService swService)
         {
             _swService = swService;
+            _uiDispatcher = Dispatcher.CurrentDispatcher;
             _aiManager = new AiExtractionManager();
             _batchEngine = new LibraryBatchEngine(_swService);
             _settingsService = new UserSettingsService();
             _settingsData = _settingsService.Load();
 
+            _isDarkMode = _settingsData.IsDarkMode;
+
             Mappings = new ObservableCollection<DimensionMapping>();
             Rows = new ObservableCollection<ParametricRow>();
             Logs = new ObservableCollection<ProcessingLog>();
+
+            Mappings.CollectionChanged += (s, e) => OnPropertyChanged(nameof(MappingsCountText));
+            Rows.CollectionChanged += (s, e) => OnPropertyChanged(nameof(RowsCountText));
 
             AvailableProviders = new ObservableCollection<string>
             {
@@ -84,13 +94,21 @@ namespace AutoSolid.ViewModels
 
             LoadSavedApiKeyForCurrentProvider();
 
+            // Timer na thread STA principal (WPF + SolidWorks COM) para captura instantânea sem erro de thread
+            _selectionTimer = new DispatcherTimer(DispatcherPriority.Normal, _uiDispatcher)
+            {
+                Interval = TimeSpan.FromMilliseconds(150)
+            };
+            _selectionTimer.Tick += SelectionTimer_Tick;
+
             // Comandos
+            AlternarTemaCommand = new RelayCommand(AlternarTema);
             AtualizarModeloAtivoCommand = new RelayCommand(AtualizarModeloAtivo);
-            IniciarSelecaoCotaCommand = new RelayCommand(IniciarSelecaoCota, () => !IsProcessing && !IsSelectingDimension);
+            IniciarSelecaoCotaCommand = new RelayCommand(IniciarSelecaoCota, () => !IsProcessing);
             ConfirmarCotaCommand = new RelayCommand(ConfirmarCotaSelecionada, () => IsSelectingDimension && HasPendingDimension);
             CancelarSelecaoCotaCommand = new RelayCommand(CancelarSelecaoCota, () => IsSelectingDimension);
             CapturarCotaCommand = new RelayCommand(IniciarSelecaoCota, () => !IsProcessing);
-            RemoverCotaCommand = new RelayCommand(RemoverCota, () => SelectedMapping != null && !IsProcessing);
+            RemoverCotaCommand = new RelayCommand(param => RemoverCota(param as DimensionMapping), _ => !IsProcessing);
             SelecionarPastaDestinoCommand = new RelayCommand(SelecionarPastaDestino);
             AvancarParaAba2Command = new RelayCommand(() => SelectedTabIndex = 1, () => Mappings.Count > 0);
 
@@ -115,8 +133,35 @@ namespace AutoSolid.ViewModels
         public ObservableCollection<ParametricRow> Rows { get; }
         public ObservableCollection<ProcessingLog> Logs { get; }
 
+        public string MappingsCountText => Mappings.Count == 1 ? "1 cota" : $"{Mappings.Count} cotas";
+        public string RowsCountText => Rows.Count == 1 ? "1 peça" : $"{Rows.Count} peças";
+
         public ObservableCollection<string> AvailableProviders { get; }
         public ObservableCollection<string> AvailableModels { get; }
+
+        public bool IsDarkMode
+        {
+            get => _isDarkMode;
+            set
+            {
+                if (SetProperty(ref _isDarkMode, value))
+                {
+                    if (_settingsData != null && _settingsService != null)
+                    {
+                        _settingsData.IsDarkMode = _isDarkMode;
+                        _settingsService.Save(_settingsData);
+                    }
+                    OnPropertyChanged(nameof(ThemeButtonText));
+                    OnPropertyChanged(nameof(ThemeButtonTooltip));
+                }
+            }
+        }
+
+        public string ThemeButtonText => IsDarkMode ? "☀️ Claro" : "🌙 Escuro";
+
+        public string ThemeButtonTooltip => IsDarkMode
+            ? "Alternar para o Modo Claro do SolidWorks"
+            : "Alternar para o Modo Escuro do SolidWorks";
 
         public string SelectedProvider
         {
@@ -181,8 +226,18 @@ namespace AutoSolid.ViewModels
         public string InputFilePath
         {
             get => _inputFilePath;
-            set => SetProperty(ref _inputFilePath, value);
+            set
+            {
+                if (SetProperty(ref _inputFilePath, value))
+                {
+                    OnPropertyChanged(nameof(InputFileDisplayName));
+                }
+            }
         }
+
+        public string InputFileDisplayName => string.IsNullOrWhiteSpace(_inputFilePath)
+            ? "Arraste a imagem/PDF da tabela aqui ou clique em Escolher"
+            : Path.GetFileName(_inputFilePath);
 
         public string ApiKey
         {
@@ -222,7 +277,7 @@ namespace AutoSolid.ViewModels
             : "Clique para salvar e bloquear a chave de API";
 
         public string ApiKeySavedBadge => (IsApiKeyLocked && !string.IsNullOrWhiteSpace(ApiKey))
-            ? "(✔ Salva)"
+            ? "✔ Salva"
             : string.Empty;
 
         public string UserInstructions
@@ -251,9 +306,14 @@ namespace AutoSolid.ViewModels
                 if (SetProperty(ref _isSelectingDimension, value))
                 {
                     OnPropertyChanged(nameof(SelectionPromptText));
+                    OnPropertyChanged(nameof(SelectDimensionButtonText));
                 }
             }
         }
+
+        public string SelectDimensionButtonText => IsSelectingDimension
+            ? "🎯 Captura Ativa — Clique para Concluir"
+            : "+ Selecionar Cotas / Extrusões no Modelo 3D";
 
         public DimensionMapping PendingDimension
         {
@@ -278,9 +338,9 @@ namespace AutoSolid.ViewModels
                     return string.Empty;
 
                 if (PendingDimension == null)
-                    return "👉 Clique agora em uma cota de Sketch ou em uma Extrusão no SolidWorks...";
+                    return "👉 Clique nas cotas, esboços ou extrusões no SolidWorks para adicioná-las direto à tabela...";
 
-                return $"✔ Detectado: {PendingDimension.FullName} ({PendingDimension.CurrentValueMm:F2} mm)";
+                return $"✔ Adicionada: {PendingDimension.FullName} ({PendingDimension.CurrentValueMm:F2} mm) — Clique na próxima...";
             }
         }
 
@@ -359,6 +419,7 @@ namespace AutoSolid.ViewModels
 
         #region Comandos
 
+        public RelayCommand AlternarTemaCommand { get; }
         public RelayCommand AtualizarModeloAtivoCommand { get; }
         public RelayCommand IniciarSelecaoCotaCommand { get; }
         public RelayCommand ConfirmarCotaCommand { get; }
@@ -383,6 +444,11 @@ namespace AutoSolid.ViewModels
 
         #region Métodos de Negócio
 
+        private void AlternarTema()
+        {
+            IsDarkMode = !IsDarkMode;
+        }
+
         private void LoadSavedApiKeyForCurrentProvider()
         {
             if (_settingsData != null && _settingsData.ProviderApiKeys != null &&
@@ -405,13 +471,11 @@ namespace AutoSolid.ViewModels
         {
             if (IsApiKeyLocked)
             {
-                // Desbloqueia para o usuário editar
                 IsApiKeyLocked = false;
                 AddLog(LogType.Info, "Campo da API Key liberado para edição.");
             }
             else
             {
-                // Salva e bloqueia novamente
                 if (!string.IsNullOrWhiteSpace(ApiKey))
                 {
                     _settingsData.ProviderApiKeys[SelectedProvider] = ApiKey.Trim();
@@ -423,7 +487,7 @@ namespace AutoSolid.ViewModels
                 }
                 else
                 {
-                    MessageBox.Show("Digite ou cole sua chave de API antes de salvar.", "Chave Vazia", MessageBoxButtons.OK, MessageBoxIcon.Information);
+                    MessageBox.Show("Digite ou cole sua chave de API antes de salvar.", "BiblioteCad — Chave Vazia", MessageBoxButtons.OK, MessageBoxIcon.Information);
                 }
             }
         }
@@ -447,7 +511,6 @@ namespace AutoSolid.ViewModels
             switch (SelectedProvider)
             {
                 case "Google Gemini":
-                    // 5 Modelos do Gemini (Priorizando os mais comuns e Low / Flash / Lite gratuitos)
                     AvailableModels.Add("gemini-3.8-flash");
                     AvailableModels.Add("gemini-2.5-flash-lite");
                     AvailableModels.Add("gemini-2.5-flash");
@@ -457,7 +520,6 @@ namespace AutoSolid.ViewModels
                     break;
 
                 case "OpenAI (GPT)":
-                    // 3 Modelos do GPT (Priorizando os mais comuns e Low / Mini)
                     AvailableModels.Add("gpt-4o-mini");
                     AvailableModels.Add("o3-mini");
                     AvailableModels.Add("gpt-4o");
@@ -465,7 +527,6 @@ namespace AutoSolid.ViewModels
                     break;
 
                 case "DeepSeek":
-                    // 2 Modelos do DeepSeek (Mais comuns e Low)
                     AvailableModels.Add("deepseek-chat");
                     AvailableModels.Add("deepseek-reasoner");
                     SelectedModel = AvailableModels[0];
@@ -477,7 +538,7 @@ namespace AutoSolid.ViewModels
         {
             if (string.IsNullOrWhiteSpace(ApiKey))
             {
-                MessageBox.Show("Insira sua chave de API para detectar os modelos da sua conta.", "Chave Necessária", MessageBoxButtons.OK, MessageBoxIcon.Information);
+                MessageBox.Show("Insira sua chave de API para detectar os modelos da sua conta.", "BiblioteCad — Chave Necessária", MessageBoxButtons.OK, MessageBoxIcon.Information);
                 return;
             }
 
@@ -506,7 +567,7 @@ namespace AutoSolid.ViewModels
                     ProgressStatusText = $"Conectado! Modelo ativo: {SelectedModel}";
                     SpeedDetailText = $"{modelos.Count} modelos liberados na conta";
                     AddLog(LogType.Success, $"Conexão validada! {modelos.Count} modelos disponíveis. Selecionado: {SelectedModel}");
-                    MessageBox.Show($"Conexão com a API Gemini funcionando perfeitamente!\n\nModelo selecionado automaticamente para sua conta:\n➔ {SelectedModel}", "Conexão OK", MessageBoxButtons.OK, MessageBoxIcon.Information);
+                    MessageBox.Show($"Conexão com a API Gemini funcionando perfeitamente!\n\nModelo selecionado automaticamente para sua conta:\n➔ {SelectedModel}", "BiblioteCad — Conexão OK", MessageBoxButtons.OK, MessageBoxIcon.Information);
                 }
                 else
                 {
@@ -518,7 +579,7 @@ namespace AutoSolid.ViewModels
                 ProgressValue = 0;
                 ProgressStatusText = "Falha ao consultar modelos.";
                 AddLog(LogType.Error, "Falha ao listar modelos da conta: " + ex.Message);
-                MessageBox.Show("Erro ao consultar modelos da conta:\n" + ex.Message, "Erro na Consulta", MessageBoxButtons.OK, MessageBoxIcon.Error);
+                MessageBox.Show("Erro ao consultar modelos da conta:\n" + ex.Message, "BiblioteCad — Erro na Consulta", MessageBoxButtons.OK, MessageBoxIcon.Error);
             }
             finally
             {
@@ -560,55 +621,37 @@ namespace AutoSolid.ViewModels
         }
 
         /// <summary>
-        /// Inicia o fluxo invertido: o usuário clica no botão primeiro, escolhe a cota (sketch ou extrusão) no SolidWorks,
-        /// e então clica no botão verde ✔ para confirmar.
+        /// Inicia o modo contínuo de seleção na thread STA principal: o usuário clica 1 vez no botão e depois vai clicando
+        /// nas cotas, esboços ou extrusões no SolidWorks para adicioná-las instantaneamente na tabela sem confirmação.
         /// </summary>
         private void IniciarSelecaoCota()
         {
             try
             {
-                var doc = _swService.GetActivePartDocument();
-                if (doc == null)
+                if (IsSelectingDimension)
                 {
-                    MessageBox.Show("Abra uma peça (.sldprt) no SolidWorks antes de iniciar a seleção de cotas.", "AutoSolid", MessageBoxButtons.OK, MessageBoxIcon.Information);
+                    CancelarSelecaoCota();
                     return;
                 }
 
-                // Limpa a seleção anterior para que o usuário escolha a cota/extrusão a partir de agora
+                var doc = _swService.GetActivePartDocument();
+                if (doc == null)
+                {
+                    MessageBox.Show("Abra uma peça (.sldprt) no SolidWorks antes de iniciar a seleção de cotas.", "BiblioteCad", MessageBoxButtons.OK, MessageBoxIcon.Information);
+                    return;
+                }
+
+                AtualizarModeloAtivo();
+
+                // Limpa qualquer seleção anterior ao ativar o modo
                 _swService.ClearActiveSelection();
+                _previousSelectionSet.Clear();
 
                 PendingDimension = null;
                 IsSelectingDimension = true;
+                _selectionTimer.Start();
 
-                _selectionPollCts?.Cancel();
-                _selectionPollCts?.Dispose();
-                _selectionPollCts = new CancellationTokenSource();
-                var token = _selectionPollCts.Token;
-
-                AddLog(LogType.Info, "Modo de seleção ativo: clique em uma cota de esboço ou em uma extrusão no SolidWorks e confirme no botão verde (✔).");
-
-                Task.Run(async () =>
-                {
-                    while (!token.IsCancellationRequested && IsSelectingDimension)
-                    {
-                        var detected = _swService.TryGetCurrentlySelectedDimension();
-                        if (detected != null)
-                        {
-                            UpdateUiSafe(() =>
-                            {
-                                if (IsSelectingDimension)
-                                {
-                                    if (PendingDimension == null || !string.Equals(PendingDimension.FullName, detected.FullName, StringComparison.OrdinalIgnoreCase))
-                                    {
-                                        PendingDimension = detected;
-                                    }
-                                }
-                            });
-                        }
-
-                        await Task.Delay(200);
-                    }
-                });
+                AddLog(LogType.Info, "Modo de seleção contínua ativo: clique nas cotas, esboços ou extrusões no SolidWorks para adicioná-las automaticamente.");
             }
             catch (Exception ex)
             {
@@ -616,61 +659,113 @@ namespace AutoSolid.ViewModels
             }
         }
 
-        private void ConfirmarCotaSelecionada()
+        private void SelectionTimer_Tick(object sender, EventArgs e)
         {
+            if (!IsSelectingDimension)
+            {
+                _selectionTimer.Stop();
+                return;
+            }
+
             try
             {
-                var mapping = PendingDimension ?? _swService.TryGetCurrentlySelectedDimension();
-                if (mapping == null)
+                var currentSelected = _swService.TryGetCurrentlySelectedDimensions();
+                if (currentSelected == null || currentSelected.Count == 0)
                 {
-                    MessageBox.Show("Nenhuma cota ou extrusão selecionada ainda no SolidWorks.", "AutoSolid", MessageBoxButtons.OK, MessageBoxIcon.Information);
+                    _previousSelectionSet.Clear();
                     return;
                 }
 
-                var existing = Mappings.FirstOrDefault(m => string.Equals(m.FullName, mapping.FullName, StringComparison.OrdinalIgnoreCase));
-                if (existing != null)
+                var currentNames = new HashSet<string>(currentSelected.Select(d => d.FullName), StringComparer.OrdinalIgnoreCase);
+
+                foreach (var detected in currentSelected)
                 {
-                    AddLog(LogType.Warning, $"A cota '{mapping.FullName}' já está na lista com o apelido '{existing.Alias}'.");
-                    CancelarSelecaoCota();
-                    return;
+                    if (!_previousSelectionSet.Contains(detected.FullName))
+                    {
+                        AdicionarCotaCapturadaAutomaticamente(detected);
+                    }
                 }
 
-                string baseAlias = mapping.Alias;
-                int suffix = 1;
-                while (Mappings.Any(m => string.Equals(m.Alias, mapping.Alias, StringComparison.OrdinalIgnoreCase)))
+                _previousSelectionSet.Clear();
+                foreach (var name in currentNames)
                 {
-                    mapping.Alias = $"{baseAlias}_{suffix++}";
+                    _previousSelectionSet.Add(name);
                 }
-
-                Mappings.Add(mapping);
-                AddLog(LogType.Success, $"Cota '{mapping.FullName}' confirmada! Apelido: '{mapping.Alias}' (Valor atual: {mapping.CurrentValueMm:F2} mm).");
-
-                CancelarSelecaoCota();
             }
             catch (Exception ex)
             {
-                AddLog(LogType.Error, ex.Message);
-                MessageBox.Show(ex.Message, "AutoSolid - Confirmação de Cota", MessageBoxButtons.OK, MessageBoxIcon.Information);
+                AddLog(LogType.Error, "Erro ao ler seleção do SolidWorks: " + ex.Message);
+            }
+        }
+
+        private void AdicionarCotaCapturadaAutomaticamente(DimensionMapping mapping)
+        {
+            if (mapping == null) return;
+
+            var existing = Mappings.FirstOrDefault(m => string.Equals(m.FullName, mapping.FullName, StringComparison.OrdinalIgnoreCase));
+            if (existing != null)
+            {
+                PendingDimension = existing;
+                SelectedMapping = existing;
+                return;
+            }
+
+            string baseAlias = mapping.Alias;
+            int suffix = 1;
+            while (Mappings.Any(m => string.Equals(m.Alias, mapping.Alias, StringComparison.OrdinalIgnoreCase)))
+            {
+                mapping.Alias = $"{baseAlias}_{suffix++}";
+            }
+
+            Mappings.Add(mapping);
+            PendingDimension = mapping;
+            SelectedMapping = mapping;
+            AvancarParaAba2Command?.RaiseCanExecuteChanged();
+
+            AddLog(LogType.Success, $"Cota '{mapping.FullName}' adicionada! Apelido: '{mapping.Alias}' (Valor atual: {mapping.CurrentValueMm:F2} mm).");
+        }
+
+        private void ConfirmarCotaSelecionada()
+        {
+            var mapping = PendingDimension ?? _swService.TryGetCurrentlySelectedDimension();
+            if (mapping != null)
+            {
+                AdicionarCotaCapturadaAutomaticamente(mapping);
             }
         }
 
         private void CancelarSelecaoCota()
         {
-            _selectionPollCts?.Cancel();
-            _selectionPollCts?.Dispose();
-            _selectionPollCts = null;
+            _selectionTimer?.Stop();
+            _previousSelectionSet.Clear();
 
             IsSelectingDimension = false;
             PendingDimension = null;
         }
 
-        private void RemoverCota()
+        private void RemoverCota(DimensionMapping item = null)
         {
-            if (SelectedMapping != null)
+            var target = item ?? SelectedMapping;
+            if (target != null && Mappings.Contains(target))
             {
-                string alias = SelectedMapping.Alias;
-                Mappings.Remove(SelectedMapping);
-                AddLog(LogType.Info, $"Cota '{alias}' removida do mapeamento.");
+                string alias = target.Alias;
+                string fullName = target.FullName;
+                Mappings.Remove(target);
+
+                if (PendingDimension != null && string.Equals(PendingDimension.FullName, fullName, StringComparison.OrdinalIgnoreCase))
+                {
+                    PendingDimension = null;
+                }
+
+                _previousSelectionSet.Add(fullName);
+                try
+                {
+                    _swService.ClearActiveSelection();
+                }
+                catch { }
+
+                AvancarParaAba2Command?.RaiseCanExecuteChanged();
+                AddLog(LogType.Info, $"Cota '{alias}' ({fullName}) removida do mapeamento.");
             }
         }
 
@@ -711,7 +806,7 @@ namespace AutoSolid.ViewModels
         {
             if (string.IsNullOrWhiteSpace(ApiKey))
             {
-                MessageBox.Show($"Por favor, insira sua chave de API para o provedor {SelectedProvider}.", "Chave de API Necessária", MessageBoxButtons.OK, MessageBoxIcon.Warning);
+                MessageBox.Show($"Por favor, insira sua chave de API para o provedor {SelectedProvider}.", "BiblioteCad — Chave de API Necessária", MessageBoxButtons.OK, MessageBoxIcon.Warning);
                 return;
             }
 
@@ -721,7 +816,6 @@ namespace AutoSolid.ViewModels
             _cts = new CancellationTokenSource();
             var sw = Stopwatch.StartNew();
 
-            // Calcula uma estimativa realista inicial com base no tamanho do arquivo
             long fileSizeBytes = new FileInfo(InputFilePath).Length;
             double estimatedTotalSeconds = Math.Max(6.0, Math.Min(25.0, 5.0 + (fileSizeBytes / (1024.0 * 250.0)) * 2.5));
 
@@ -733,7 +827,6 @@ namespace AutoSolid.ViewModels
 
             AddLog(LogType.Info, $"Iniciando extração via {SelectedProvider} ({SelectedModel}) para '{Path.GetFileName(InputFilePath)}'...");
 
-            // Task em segundo plano que atualiza a barra e o cronômetro suavemente a cada 250ms
             bool extractionRunning = true;
             string currentStageText = $"Analisando documento em {SelectedModel}...";
             double minStageProgress = 10.0;
@@ -745,13 +838,11 @@ namespace AutoSolid.ViewModels
                     double elapsed = sw.Elapsed.TotalSeconds;
                     double remaining = Math.Max(1.0, estimatedTotalSeconds - elapsed);
 
-                    // Se passar da estimativa inicial, ajusta suavemente
                     if (elapsed >= estimatedTotalSeconds - 1.5)
                     {
                         remaining = 2.0;
                     }
 
-                    // Progresso assintótico suave até 90% enquanto aguarda a IA
                     double timeRatio = 1.0 - Math.Exp(-elapsed / (estimatedTotalSeconds * 0.65));
                     double calculatedProgress = Math.Max(minStageProgress, Math.Min(91.0, 10.0 + timeRatio * 81.0));
 
@@ -817,7 +908,7 @@ namespace AutoSolid.ViewModels
                 SpeedDetailText = "Verifique o log abaixo";
 
                 AddLog(LogType.Error, "Falha na extração por IA: " + ex.Message);
-                MessageBox.Show("Erro ao extrair dados com a IA:\n\n" + ex.Message, "Erro na Extração", MessageBoxButtons.OK, MessageBoxIcon.Error);
+                MessageBox.Show("Erro ao extrair dados com a IA:\n\n" + ex.Message, "BiblioteCad — Erro na Extração", MessageBoxButtons.OK, MessageBoxIcon.Error);
             }
             finally
             {
@@ -870,6 +961,35 @@ namespace AutoSolid.ViewModels
 
         private async Task GerarBibliotecaAsync()
         {
+            int totalPecas = Rows.Count;
+            const int limiteTabelaGrande = 20;
+
+            if (totalPecas >= limiteTabelaGrande)
+            {
+                int minMinutos = Math.Max(1, (int)Math.Floor((totalPecas * 2.2) / 60.0));
+                int maxMinutos = Math.Max(minMinutos + 1, (int)Math.Ceiling((totalPecas * 3.5) / 60.0));
+                string tempoEstimadoTexto = minMinutos == maxMinutos
+                    ? $"{minMinutos} minutos"
+                    : $"{minMinutos} a {maxMinutos} minutos";
+
+                string mensagemConfirmacao =
+                    $"O arquivo possui {totalPecas} peças e a geração completa pode demorar cerca de {tempoEstimadoTexto}. Devemos prosseguir?\n\n" +
+                    "💡 Sugestão: Quando a tabela for muito extensa, recomendamos fazer a geração em partes menores (por exemplo, pedindo no campo 'Instruções' para extrair por faixas como 'Apenas M4 até M10' ou removendo linhas excedentes da tabela) para manter o SolidWorks leve e rápido.";
+
+                var confirmResult = MessageBox.Show(
+                    mensagemConfirmacao,
+                    "BiblioteCad — Confirmação de Lote Grande",
+                    MessageBoxButtons.YesNo,
+                    MessageBoxIcon.Question,
+                    MessageBoxDefaultButton.Button1);
+
+                if (confirmResult != DialogResult.Yes)
+                {
+                    AddLog(LogType.Info, $"Geração de {totalPecas} peças cancelada na confirmação para divisão em partes.");
+                    return;
+                }
+            }
+
             IsProcessing = true;
             _cts = new CancellationTokenSource();
             var sw = Stopwatch.StartNew();
@@ -877,7 +997,7 @@ namespace AutoSolid.ViewModels
             ProgressValue = 0.0;
             ProgressStatusText = "Iniciando motor de geração SolidWorks...";
             ElapsedTimeText = "⏱ Decorrido: 00:00";
-            EstimatedTimeText = $"⏳ Estimado: ~{FormatTime(Rows.Count * 2.0)}";
+            EstimatedTimeText = $"⏳ Estimado: ~{FormatTime(Rows.Count * 2.5)}";
             SpeedDetailText = $"0 de {Rows.Count} peças";
 
             AddLog(LogType.Info, $"Iniciando motor de lote para gerar {Rows.Count} arquivos em '{OutputDirectory}'...");
@@ -908,7 +1028,7 @@ namespace AutoSolid.ViewModels
                 SpeedDetailText = $"✔ Biblioteca finalizada!";
 
                 AddLog(LogType.Success, $"Biblioteca gerada em {sw.Elapsed.TotalSeconds:F1}s!");
-                MessageBox.Show($"Geração da biblioteca concluída com sucesso em {sw.Elapsed.TotalSeconds:F1} segundos!", "AutoSolid", MessageBoxButtons.OK, MessageBoxIcon.Information);
+                MessageBox.Show($"Geração da biblioteca concluída com sucesso em {sw.Elapsed.TotalSeconds:F1} segundos!", "BiblioteCad", MessageBoxButtons.OK, MessageBoxIcon.Information);
 
                 LimparPainelAposGeracao();
             }
@@ -923,7 +1043,7 @@ namespace AutoSolid.ViewModels
                 ProgressStatusText = "Erro durante o processamento.";
                 EstimatedTimeText = "⏳ Interrompido";
                 AddLog(LogType.Error, "Erro crítico no motor de lote: " + ex.Message);
-                MessageBox.Show("Ocorreu um erro durante a geração:\n" + ex.Message, "Erro no Lote", MessageBoxButtons.OK, MessageBoxIcon.Error);
+                MessageBox.Show("Ocorreu um erro durante a geração:\n" + ex.Message, "BiblioteCad — Erro no Lote", MessageBoxButtons.OK, MessageBoxIcon.Error);
             }
             finally
             {
@@ -935,7 +1055,7 @@ namespace AutoSolid.ViewModels
 
         /// <summary>
         /// Limpa todos os dados temporários do painel após finalizar uma geração em lote,
-        /// mantendo intactas as configurações de API Key, Provedor e Modelo.
+        /// mantendo intactas as configurações de API Key, Provedor, Modelo e Tema.
         /// </summary>
         private void LimparPainelAposGeracao()
         {
@@ -979,9 +1099,9 @@ namespace AutoSolid.ViewModels
 
         private void UpdateUiSafe(Action action)
         {
-            if (System.Windows.Application.Current != null && System.Windows.Application.Current.Dispatcher != null)
+            if (_uiDispatcher != null && !_uiDispatcher.CheckAccess())
             {
-                System.Windows.Application.Current.Dispatcher.BeginInvoke(action);
+                _uiDispatcher.BeginInvoke(action);
             }
             else
             {

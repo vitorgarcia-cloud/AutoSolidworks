@@ -30,3 +30,5 @@ C:\DevNinja\AutomationsSolidworks\AutoSolid\AutoSolid\obj\Debug\AutoSolid.csproj
 C:\DevNinja\AutomationsSolidworks\AutoSolid\AutoSolid\obj\Debug\AutoSolid.csproj.Up2Date
 C:\DevNinja\AutomationsSolidworks\AutoSolid\AutoSolid\obj\Debug\AutoSolid.dll
 C:\DevNinja\AutomationsSolidworks\AutoSolid\AutoSolid\obj\Debug\AutoSolid.pdb
+C:\DevNinja\AutomationsSolidworks\AutoSolid\AutoSolid\bin\Debug\Assets\BiblioteCadLogo.png
+C:\DevNinja\AutomationsSolidworks\AutoSolid\AutoSolid\bin\Debug\Assets\BiblioteCadTaskpane20.bmp
