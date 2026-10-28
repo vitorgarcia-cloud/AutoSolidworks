@@ -1,0 +1,10 @@
+C:\SW_Master\Automations\AutoSolidArruela\AutoSolidArruela\AutoSolidArruela\obj\Debug\AutoSolidArruela.csproj.AssemblyReference.cache
+C:\SW_Master\Automations\AutoSolidArruela\AutoSolidArruela\AutoSolidArruela\obj\Debug\AutoSolidArruela.Properties.Resources.resources
+C:\SW_Master\Automations\AutoSolidArruela\AutoSolidArruela\AutoSolidArruela\obj\Debug\AutoSolidArruela.csproj.GenerateResource.cache
+C:\SW_Master\Automations\AutoSolidArruela\AutoSolidArruela\AutoSolidArruela\obj\Debug\AutoSolidArruela.csproj.CoreCompileInputs.cache
+C:\SW_Master\Automations\AutoSolidArruela\AutoSolidArruela\AutoSolidArruela\bin\Debug\AutoSolidArruela.exe.config
+C:\SW_Master\Automations\AutoSolidArruela\AutoSolidArruela\AutoSolidArruela\bin\Debug\AutoSolidArruela.exe
+C:\SW_Master\Automations\AutoSolidArruela\AutoSolidArruela\AutoSolidArruela\bin\Debug\AutoSolidArruela.pdb
+C:\SW_Master\Automations\AutoSolidArruela\AutoSolidArruela\AutoSolidArruela\obj\Debug\AutoSolidArruela.Form1.resources
+C:\SW_Master\Automations\AutoSolidArruela\AutoSolidArruela\AutoSolidArruela\obj\Debug\AutoSolidArruela.exe
+C:\SW_Master\Automations\AutoSolidArruela\AutoSolidArruela\AutoSolidArruela\obj\Debug\AutoSolidArruela.pdb

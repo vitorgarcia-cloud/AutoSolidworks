@@ -1,0 +1,10 @@
+C:\SW_Master\Automations\AutoSolidParaf\AutoSolidParaf\obj\Debug\AutoSolidParaf.csproj.AssemblyReference.cache
+C:\SW_Master\Automations\AutoSolidParaf\AutoSolidParaf\obj\Debug\AutoSolidParaf.Form1.resources
+C:\SW_Master\Automations\AutoSolidParaf\AutoSolidParaf\obj\Debug\AutoSolidParaf.Properties.Resources.resources
+C:\SW_Master\Automations\AutoSolidParaf\AutoSolidParaf\obj\Debug\AutoSolidParaf.csproj.GenerateResource.cache
+C:\SW_Master\Automations\AutoSolidParaf\AutoSolidParaf\obj\Debug\AutoSolidParaf.csproj.CoreCompileInputs.cache
+C:\SW_Master\Automations\AutoSolidParaf\AutoSolidParaf\bin\Debug\AutoSolidParaf.exe.config
+C:\SW_Master\Automations\AutoSolidParaf\AutoSolidParaf\bin\Debug\AutoSolidParaf.exe
+C:\SW_Master\Automations\AutoSolidParaf\AutoSolidParaf\bin\Debug\AutoSolidParaf.pdb
+C:\SW_Master\Automations\AutoSolidParaf\AutoSolidParaf\obj\Debug\AutoSolidParaf.exe
+C:\SW_Master\Automations\AutoSolidParaf\AutoSolidParaf\obj\Debug\AutoSolidParaf.pdb

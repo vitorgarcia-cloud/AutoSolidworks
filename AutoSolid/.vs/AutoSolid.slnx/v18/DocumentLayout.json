@@ -1,0 +1,36 @@
+{
+  "Version": 1,
+  "WorkspaceRootPath": "C:\\SW_Master\\Automations\\AutoSolid\\",
+  "Documents": [
+    {
+      "AbsoluteMoniker": "D:0:0:{E612000F-CE1B-45C5-928D-FDC81D31E9C5}|AutoSolid\\AutoSolid.csproj|c:\\sw_master\\automations\\autosolid\\autosolid\\form1.cs||{A6C744A8-0E4A-4FC6-886A-064283054674}|Form",
+      "RelativeMoniker": "D:0:0:{E612000F-CE1B-45C5-928D-FDC81D31E9C5}|AutoSolid\\AutoSolid.csproj|solutionrelative:autosolid\\form1.cs||{A6C744A8-0E4A-4FC6-886A-064283054674}|Form"
+    }
+  ],
+  "DocumentGroupContainers": [
+    {
+      "Orientation": 0,
+      "VerticalTabListWidth": 256,
+      "DocumentGroups": [
+        {
+          "DockedWidth": 200,
+          "SelectedChildIndex": 0,
+          "Children": [
+            {
+              "$type": "Document",
+              "DocumentIndex": 0,
+              "Title": "Form1.cs [Design]",
+              "DocumentMoniker": "C:\\SW_Master\\Automations\\AutoSolid\\AutoSolid\\Form1.cs",
+              "RelativeDocumentMoniker": "AutoSolid\\Form1.cs",
+              "ToolTip": "C:\\SW_Master\\Automations\\AutoSolid\\AutoSolid\\Form1.cs [Design]",
+              "RelativeToolTip": "AutoSolid\\Form1.cs [Design]",
+              "Icon": "ae27a6b0-e345-4288-96df-5eaf394ee369.000738|",
+              "WhenOpened": "2026-10-27T21:50:07.103Z",
+              "EditorCaption": " [Design]"
+            }
+          ]
+        }
+      ]
+    }
+  ]
+}

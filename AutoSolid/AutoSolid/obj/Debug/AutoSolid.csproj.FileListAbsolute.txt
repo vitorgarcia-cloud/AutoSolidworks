@@ -1,0 +1,16 @@
+C:\SW_Master\Automations\AutoSolid\AutoSolid\obj\Debug\AutoSolid.csproj.AssemblyReference.cache
+C:\SW_Master\Automations\AutoSolid\AutoSolid\obj\Debug\AutoSolid_MarkupCompile.cache
+C:\SW_Master\Automations\AutoSolid\AutoSolid\obj\Debug\Views\MainTaskpaneView.g.cs
+C:\SW_Master\Automations\AutoSolid\AutoSolid\obj\Debug\AutoSolid_MarkupCompile.lref
+C:\SW_Master\Automations\AutoSolid\AutoSolid\bin\Debug\AutoSolid.dll.config
+C:\SW_Master\Automations\AutoSolid\AutoSolid\bin\Debug\AutoSolid.dll
+C:\SW_Master\Automations\AutoSolid\AutoSolid\bin\Debug\AutoSolid.pdb
+C:\SW_Master\Automations\AutoSolid\AutoSolid\obj\Debug\Views\MainTaskpaneView.baml
+C:\SW_Master\Automations\AutoSolid\AutoSolid\obj\Debug\AutoSolid.g.resources
+C:\SW_Master\Automations\AutoSolid\AutoSolid\obj\Debug\AutoSolid.csproj.CoreCompileInputs.cache
+C:\SW_Master\Automations\AutoSolid\AutoSolid\obj\Debug\AutoSolid.dll
+C:\SW_Master\Automations\AutoSolid\AutoSolid\obj\Debug\AutoSolid.pdb
+C:\SW_Master\Automations\AutoSolid\AutoSolid\bin\Debug\SolidWorks.Interop.sldworks.dll
+C:\SW_Master\Automations\AutoSolid\AutoSolid\bin\Debug\SolidWorks.Interop.swconst.dll
+C:\SW_Master\Automations\AutoSolid\AutoSolid\bin\Debug\SolidWorks.Interop.swpublished.dll
+C:\SW_Master\Automations\AutoSolid\AutoSolid\obj\Debug\AutoSolid.csproj.Up2Date
