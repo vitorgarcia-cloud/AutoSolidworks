@@ -38,6 +38,75 @@ namespace AutoSolid.Services
         }
 
         /// <summary>
+        /// Detecta automaticamente se o documento ativo no SolidWorks é um perfil de soldagem / biblioteca de recursos (.sldlfp)
+        /// ou uma peça 3D padrão (.sldprt).
+        /// </summary>
+        public bool DetectIfDocumentIsProfile(ModelDoc2 doc)
+        {
+            if (doc == null) return false;
+
+            try
+            {
+                string path = doc.GetPathName();
+                if (!string.IsNullOrEmpty(path))
+                {
+                    string ext = Path.GetExtension(path);
+                    if (string.Equals(ext, ".sldlfp", StringComparison.OrdinalIgnoreCase))
+                        return true;
+
+                    // Pastas típicas de perfis no SolidWorks (ex: "weldment profiles", "perfis de soldagem", "profiles")
+                    if (path.IndexOf("weldment", StringComparison.OrdinalIgnoreCase) >= 0 ||
+                        path.IndexOf("perfis", StringComparison.OrdinalIgnoreCase) >= 0 ||
+                        path.IndexOf("profiles", StringComparison.OrdinalIgnoreCase) >= 0)
+                    {
+                        return true;
+                    }
+                }
+
+                string title = doc.GetTitle();
+                if (!string.IsNullOrEmpty(title))
+                {
+                    if (title.EndsWith(".sldlfp", StringComparison.OrdinalIgnoreCase))
+                        return true;
+                }
+
+                if (doc is PartDoc partDoc)
+                {
+                    try
+                    {
+                        if (partDoc.IsWeldment())
+                            return true;
+                    }
+                    catch { }
+
+                    // Perfis de soldagem .sldlfp contêm tipicamente apenas esboço 2D da seção transversal e 0 corpos sólidos 3D
+                    try
+                    {
+                        object[] bodies = partDoc.GetBodies2((int)swBodyType_e.swSolidBody, false) as object[];
+                        bool hasSolidBodies = bodies != null && bodies.Length > 0;
+
+                        if (!hasSolidBodies)
+                        {
+                            if (!string.IsNullOrEmpty(title) &&
+                                (title.IndexOf("perfil", StringComparison.OrdinalIgnoreCase) >= 0 ||
+                                 title.IndexOf("profile", StringComparison.OrdinalIgnoreCase) >= 0))
+                            {
+                                return true;
+                            }
+                        }
+                    }
+                    catch { }
+                }
+            }
+            catch
+            {
+                // Fallback seguro
+            }
+
+            return false;
+        }
+
+        /// <summary>
         /// Limpa a seleção atual no SolidWorks para iniciar o modo interativo de escolha de cota/extrusão.
         /// </summary>
         public void ClearActiveSelection()

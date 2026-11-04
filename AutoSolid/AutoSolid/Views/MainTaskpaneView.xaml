@@ -521,7 +521,7 @@
                                             <ColumnDefinition Width="Auto"/>
                                         </Grid.ColumnDefinitions>
                                         <Border Grid.Column="0" Background="{DynamicResource SwBlueBrush}" CornerRadius="1"/>
-                                        <TextBlock Grid.Column="1" Text="1. Peça-Template Ativa (.SLDPRT)" FontSize="11" FontWeight="Bold" Foreground="{DynamicResource SwTextDarkBrush}" VerticalAlignment="Center" Margin="7,0,0,0"/>
+                                        <TextBlock Grid.Column="1" Text="{Binding TemplateSectionHeaderText}" FontSize="11" FontWeight="Bold" Foreground="{DynamicResource SwTextDarkBrush}" VerticalAlignment="Center" Margin="7,0,0,0"/>
                                         <Button Grid.Column="2" Content="↻ Atualizar" Style="{StaticResource SecondaryButton}" Command="{Binding AtualizarModeloAtivoCommand}" Padding="7,2" FontSize="10"/>
                                     </Grid>
                                 </Border>
@@ -530,11 +530,46 @@
                                     <Grid.ColumnDefinitions>
                                         <ColumnDefinition Width="Auto"/>
                                         <ColumnDefinition Width="*"/>
+                                        <ColumnDefinition Width="Auto"/>
                                     </Grid.ColumnDefinitions>
                                     <TextBlock Grid.Column="0" Text="Modelo:" FontSize="10.5" Foreground="{DynamicResource SwTextMutedBrush}" VerticalAlignment="Center" Margin="0,0,7,0"/>
                                     <Border Grid.Column="1" Background="{DynamicResource SwInputBgBrush}" BorderBrush="{DynamicResource SwInputBorderBrush}" BorderThickness="1" CornerRadius="2" Padding="7,4">
                                         <TextBlock Text="{Binding ActiveTemplateName}" FontWeight="SemiBold" FontSize="11.5" Foreground="{DynamicResource SwTextHighlightBrush}" TextTrimming="CharacterEllipsis"/>
                                     </Border>
+                                    <Button Grid.Column="2"
+                                            Command="{Binding AlternarModoExportacaoCommand}"
+                                            Cursor="Hand"
+                                            Margin="6,0,0,0"
+                                            VerticalAlignment="Center"
+                                            ToolTip="Clique para alternar entre Peça (.SLDPRT) e Perfil (.SLDLFP). O botão Atualizar também detecta automaticamente.">
+                                        <Button.Template>
+                                            <ControlTemplate TargetType="Button">
+                                                <Border x:Name="badgeBorder"
+                                                        Background="{DynamicResource SwBadgeBgBrush}"
+                                                        BorderBrush="{DynamicResource SwBlueBorderBrush}"
+                                                        BorderThickness="1"
+                                                        CornerRadius="2"
+                                                        Padding="6,3">
+                                                    <TextBlock x:Name="badgeText"
+                                                               Text="{Binding ExportTypeBadgeText}"
+                                                               FontSize="9.5"
+                                                               FontWeight="Bold"
+                                                               Foreground="{DynamicResource SwTextHighlightBrush}"
+                                                               VerticalAlignment="Center"/>
+                                                </Border>
+                                                <ControlTemplate.Triggers>
+                                                    <Trigger Property="IsMouseOver" Value="True">
+                                                        <Setter TargetName="badgeBorder" Property="Background" Value="{DynamicResource SwBlueBrush}"/>
+                                                        <Setter TargetName="badgeBorder" Property="BorderBrush" Value="{DynamicResource SwBlueHoverBrush}"/>
+                                                        <Setter TargetName="badgeText" Property="Foreground" Value="#FFFFFF"/>
+                                                    </Trigger>
+                                                    <Trigger Property="IsPressed" Value="True">
+                                                        <Setter TargetName="badgeBorder" Property="Opacity" Value="0.8"/>
+                                                    </Trigger>
+                                                </ControlTemplate.Triggers>
+                                            </ControlTemplate>
+                                        </Button.Template>
+                                    </Button>
                                 </Grid>
                             </StackPanel>
                         </Border>
@@ -910,7 +945,7 @@
                                     <ColumnDefinition Width="Auto"/>
                                 </Grid.ColumnDefinitions>
                                 <Button Grid.Column="0"
-                                        Content="✔ Aprovar e Gerar Biblioteca (.SLDPRT)"
+                                        Content="{Binding GerarButtonText}"
                                         Style="{StaticResource SuccessButton}"
                                         Command="{Binding GerarBibliotecaCommand}"
                                         Height="31" FontSize="11.5" FontWeight="Bold" Margin="0,0,6,0"/>

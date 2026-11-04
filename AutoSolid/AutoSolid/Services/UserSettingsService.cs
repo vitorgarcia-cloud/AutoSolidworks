@@ -11,11 +11,12 @@ namespace AutoSolid.Services
         public string SelectedProvider { get; set; } = "Google Gemini";
         public string SelectedModel { get; set; } = "gemini-3.8-flash";
         public bool IsDarkMode { get; set; } = true;
+        public bool IsPerfilMode { get; set; } = false;
         public Dictionary<string, string> ProviderApiKeys { get; set; } = new Dictionary<string, string>(StringComparer.OrdinalIgnoreCase);
     }
 
     /// <summary>
-    /// Serviço responsável por persistir as chaves de API e preferências de tema do usuário em disco (%APPDATA%\AutoSolid\settings.json).
+    /// Serviço responsável por persistir as chaves de API e preferências de tema/perfil do usuário em disco (%APPDATA%\AutoSolid\settings.json).
     /// </summary>
     public class UserSettingsService
     {
@@ -74,6 +75,14 @@ namespace AutoSolid.Services
                         data.IsDarkMode = bDark;
                     else if (bool.TryParse(raw["IsDarkMode"].ToString(), out bool parsedDark))
                         data.IsDarkMode = parsedDark;
+                }
+
+                if (raw.ContainsKey("IsPerfilMode") && raw["IsPerfilMode"] != null)
+                {
+                    if (raw["IsPerfilMode"] is bool bPerfil)
+                        data.IsPerfilMode = bPerfil;
+                    else if (bool.TryParse(raw["IsPerfilMode"].ToString(), out bool parsedPerfil))
+                        data.IsPerfilMode = parsedPerfil;
                 }
 
                 if (raw.ContainsKey("ProviderApiKeys") && raw["ProviderApiKeys"] is Dictionary<string, object> keysDict)

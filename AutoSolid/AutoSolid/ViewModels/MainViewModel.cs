@@ -32,6 +32,7 @@ namespace AutoSolid.ViewModels
         private string _apiKey = string.Empty;
         private bool _isApiKeyLocked = false;
         private bool _isDarkMode = true;
+        private bool _isPerfilMode = false;
         private string _userInstructions = string.Empty;
         private string _skuPrefix = string.Empty;
 
@@ -64,6 +65,7 @@ namespace AutoSolid.ViewModels
             _settingsData = _settingsService.Load();
 
             _isDarkMode = _settingsData.IsDarkMode;
+            _isPerfilMode = _settingsData.IsPerfilMode;
 
             Mappings = new ObservableCollection<DimensionMapping>();
             Rows = new ObservableCollection<ParametricRow>();
@@ -104,6 +106,7 @@ namespace AutoSolid.ViewModels
             // Comandos
             AlternarTemaCommand = new RelayCommand(AlternarTema);
             AtualizarModeloAtivoCommand = new RelayCommand(AtualizarModeloAtivo);
+            AlternarModoExportacaoCommand = new RelayCommand(AlternarModoExportacao, () => !IsProcessing);
             IniciarSelecaoCotaCommand = new RelayCommand(IniciarSelecaoCota, () => !IsProcessing);
             ConfirmarCotaCommand = new RelayCommand(ConfirmarCotaSelecionada, () => IsSelectingDimension && HasPendingDimension);
             CancelarSelecaoCotaCommand = new RelayCommand(CancelarSelecaoCota, () => IsSelectingDimension);
@@ -162,6 +165,35 @@ namespace AutoSolid.ViewModels
         public string ThemeButtonTooltip => IsDarkMode
             ? "Alternar para o Modo Claro do SolidWorks"
             : "Alternar para o Modo Escuro do SolidWorks";
+
+        public bool IsPerfilMode
+        {
+            get => _isPerfilMode;
+            set
+            {
+                if (SetProperty(ref _isPerfilMode, value))
+                {
+                    if (_settingsData != null && _settingsService != null)
+                    {
+                        _settingsData.IsPerfilMode = _isPerfilMode;
+                        _settingsService.Save(_settingsData);
+                    }
+                    OnPropertyChanged(nameof(ExportExtension));
+                    OnPropertyChanged(nameof(TemplateSectionHeaderText));
+                    OnPropertyChanged(nameof(GerarButtonText));
+                    OnPropertyChanged(nameof(ExportTypeBadgeText));
+                    OnPropertyChanged(nameof(ItemTypeSingularText));
+                    OnPropertyChanged(nameof(ItemTypePluralText));
+                }
+            }
+        }
+
+        public string ExportExtension => IsPerfilMode ? ".SLDLFP" : ".SLDPRT";
+        public string TemplateSectionHeaderText => IsPerfilMode ? "1. Perfil-Template Ativo (.SLDLFP)" : "1. Peça-Template Ativa (.SLDPRT)";
+        public string GerarButtonText => $"✔ Aprovar e Gerar Biblioteca ({ExportExtension})";
+        public string ExportTypeBadgeText => IsPerfilMode ? "PERFIL (.SLDLFP)" : "PEÇA (.SLDPRT)";
+        public string ItemTypeSingularText => IsPerfilMode ? "perfil" : "peça";
+        public string ItemTypePluralText => IsPerfilMode ? "perfis" : "peças";
 
         public string SelectedProvider
         {
@@ -421,6 +453,7 @@ namespace AutoSolid.ViewModels
 
         public RelayCommand AlternarTemaCommand { get; }
         public RelayCommand AtualizarModeloAtivoCommand { get; }
+        public RelayCommand AlternarModoExportacaoCommand { get; }
         public RelayCommand IniciarSelecaoCotaCommand { get; }
         public RelayCommand ConfirmarCotaCommand { get; }
         public RelayCommand CancelarSelecaoCotaCommand { get; }
@@ -600,24 +633,36 @@ namespace AutoSolid.ViewModels
                         ActiveTemplateName = doc.GetTitle();
                     }
 
+                    // Verificação automática do tipo de exportação (Peça .SLDPRT ou Perfil .SLDLFP)
+                    bool isPerfil = _swService.DetectIfDocumentIsProfile(doc);
+                    IsPerfilMode = isPerfil;
+
                     if (string.IsNullOrEmpty(OutputDirectory))
                     {
                         string docDir = Path.GetDirectoryName(doc.GetPathName());
                         if (!string.IsNullOrEmpty(docDir))
                         {
-                            OutputDirectory = Path.Combine(docDir, "Biblioteca_Gerada");
+                            OutputDirectory = Path.Combine(docDir, IsPerfilMode ? "Perfis_Gerados" : "Biblioteca_Gerada");
                         }
                     }
+
+                    AddLog(LogType.Info, $"Template ativo: {ActiveTemplateName} | Tipo detectado: {(IsPerfilMode ? "Perfil (.SLDLFP)" : "Peça (.SLDPRT)")}");
                 }
                 else
                 {
-                    ActiveTemplateName = "Nenhum documento de peça (.sldprt) ativo";
+                    ActiveTemplateName = "Nenhum documento de peça ou perfil (.sldprt / .sldlfp) ativo";
                 }
             }
             catch (Exception ex)
             {
                 ActiveTemplateName = "Erro ao detectar peça: " + ex.Message;
             }
+        }
+
+        public void AlternarModoExportacao()
+        {
+            IsPerfilMode = !IsPerfilMode;
+            AddLog(LogType.Info, $"Modo de exportação alterado para: {ExportTypeBadgeText}");
         }
 
         /// <summary>
@@ -637,7 +682,7 @@ namespace AutoSolid.ViewModels
                 var doc = _swService.GetActivePartDocument();
                 if (doc == null)
                 {
-                    MessageBox.Show("Abra uma peça (.sldprt) no SolidWorks antes de iniciar a seleção de cotas.", "BiblioteCad", MessageBoxButtons.OK, MessageBoxIcon.Information);
+                    MessageBox.Show("Abra uma peça ou perfil (.sldprt / .sldlfp) no SolidWorks antes de iniciar a seleção de cotas.", "BiblioteCad", MessageBoxButtons.OK, MessageBoxIcon.Information);
                     return;
                 }
 
@@ -961,20 +1006,20 @@ namespace AutoSolid.ViewModels
 
         private async Task GerarBibliotecaAsync()
         {
-            int totalPecas = Rows.Count;
+            int totalItens = Rows.Count;
             const int limiteTabelaGrande = 20;
 
-            if (totalPecas >= limiteTabelaGrande)
+            if (totalItens >= limiteTabelaGrande)
             {
-                int minMinutos = Math.Max(1, (int)Math.Floor((totalPecas * 2.2) / 60.0));
-                int maxMinutos = Math.Max(minMinutos + 1, (int)Math.Ceiling((totalPecas * 3.5) / 60.0));
+                int minMinutos = Math.Max(1, (int)Math.Floor((totalItens * 2.2) / 60.0));
+                int maxMinutos = Math.Max(minMinutos + 1, (int)Math.Ceiling((totalItens * 3.5) / 60.0));
                 string tempoEstimadoTexto = minMinutos == maxMinutos
                     ? $"{minMinutos} minutos"
                     : $"{minMinutos} a {maxMinutos} minutos";
 
                 string mensagemConfirmacao =
-                    $"O arquivo possui {totalPecas} peças e a geração completa pode demorar cerca de {tempoEstimadoTexto}. Devemos prosseguir?\n\n" +
-                    "💡 Sugestão: Quando a tabela for muito extensa, recomendamos fazer a geração em partes menores (por exemplo, pedindo no campo 'Instruções' para extrair por faixas como 'Apenas M4 até M10' ou removendo linhas excedentes da tabela) para manter o SolidWorks leve e rápido.";
+                    $"O arquivo possui {totalItens} {ItemTypePluralText} e a geração completa ({ExportExtension}) pode demorar cerca de {tempoEstimadoTexto}. Devemos prosseguir?\n\n" +
+                    $"💡 Sugestão: Quando a tabela for muito extensa, recomendamos fazer a geração em partes menores (por exemplo, pedindo no campo 'Instruções' para extrair por faixas como 'Apenas M4 até M10' ou removendo linhas excedentes da tabela) para manter o SolidWorks leve e rápido.";
 
                 var confirmResult = MessageBox.Show(
                     mensagemConfirmacao,
@@ -985,7 +1030,7 @@ namespace AutoSolid.ViewModels
 
                 if (confirmResult != DialogResult.Yes)
                 {
-                    AddLog(LogType.Info, $"Geração de {totalPecas} peças cancelada na confirmação para divisão em partes.");
+                    AddLog(LogType.Info, $"Geração de {totalItens} {ItemTypePluralText} cancelada na confirmação para divisão em partes.");
                     return;
                 }
             }
@@ -995,12 +1040,12 @@ namespace AutoSolid.ViewModels
             var sw = Stopwatch.StartNew();
 
             ProgressValue = 0.0;
-            ProgressStatusText = "Iniciando motor de geração SolidWorks...";
+            ProgressStatusText = $"Iniciando motor de geração SolidWorks ({ExportExtension})...";
             ElapsedTimeText = "⏱ Decorrido: 00:00";
             EstimatedTimeText = $"⏳ Estimado: ~{FormatTime(Rows.Count * 2.5)}";
-            SpeedDetailText = $"0 de {Rows.Count} peças";
+            SpeedDetailText = $"0 de {Rows.Count} {ItemTypePluralText}";
 
-            AddLog(LogType.Info, $"Iniciando motor de lote para gerar {Rows.Count} arquivos em '{OutputDirectory}'...");
+            AddLog(LogType.Info, $"Iniciando motor de lote para gerar {Rows.Count} {ItemTypePluralText} ({ExportExtension}) em '{OutputDirectory}'...");
 
             var progressReporter = new Progress<BatchProgressReport>(report =>
             {
@@ -1008,7 +1053,7 @@ namespace AutoSolid.ViewModels
                 ProgressStatusText = report.StageDetail;
                 ElapsedTimeText = $"⏱ Decorrido: {FormatTime(report.ElapsedSeconds)}";
                 EstimatedTimeText = $"⏳ Restante: ~{FormatTime(report.EstimatedRemainingSeconds)}";
-                SpeedDetailText = $"⚡ {report.AverageSecondsPerItem:F1}s/peça ({report.CurrentIndex}/{report.TotalCount})";
+                SpeedDetailText = $"⚡ {report.AverageSecondsPerItem:F1}s/{ItemTypeSingularText} ({report.CurrentIndex}/{report.TotalCount})";
 
                 if (report.LogEntry != null)
                 {
@@ -1018,17 +1063,17 @@ namespace AutoSolid.ViewModels
 
             try
             {
-                await _batchEngine.RunBatchAsync(Mappings, Rows, OutputDirectory, progressReporter, _cts.Token);
+                await _batchEngine.RunBatchAsync(Mappings, Rows, OutputDirectory, progressReporter, _cts.Token, IsPerfilMode);
                 sw.Stop();
 
                 ProgressValue = 100.0;
-                ProgressStatusText = $"Concluído! {Rows.Count} peças processadas com sucesso.";
+                ProgressStatusText = $"Concluído! {Rows.Count} {ItemTypePluralText} processados com sucesso.";
                 ElapsedTimeText = $"⏱ Total: {FormatTime(sw.Elapsed.TotalSeconds)}";
                 EstimatedTimeText = "⏳ Restante: 00:00";
                 SpeedDetailText = $"✔ Biblioteca finalizada!";
 
-                AddLog(LogType.Success, $"Biblioteca gerada em {sw.Elapsed.TotalSeconds:F1}s!");
-                MessageBox.Show($"Geração da biblioteca concluída com sucesso em {sw.Elapsed.TotalSeconds:F1} segundos!", "BiblioteCad", MessageBoxButtons.OK, MessageBoxIcon.Information);
+                AddLog(LogType.Success, $"Biblioteca de {ItemTypePluralText} ({ExportExtension}) gerada em {sw.Elapsed.TotalSeconds:F1}s!");
+                MessageBox.Show($"Geração da biblioteca ({ExportExtension}) concluída com sucesso em {sw.Elapsed.TotalSeconds:F1} segundos!", "BiblioteCad", MessageBoxButtons.OK, MessageBoxIcon.Information);
 
                 LimparPainelAposGeracao();
             }

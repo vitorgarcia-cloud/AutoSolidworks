@@ -34,13 +34,15 @@ namespace AutoSolid.Services
 
         /// <summary>
         /// Processa a geração em lote das variações paramétricas com telemetria detalhada de tempo e etapas.
+        /// Suporta tanto peças (.SLDPRT) quanto perfis de soldagem (.SLDLFP).
         /// </summary>
         public async Task RunBatchAsync(
             IList<DimensionMapping> mappings,
             IList<ParametricRow> rows,
             string outputDirectory,
             IProgress<BatchProgressReport> progress,
-            CancellationToken cancellationToken)
+            CancellationToken cancellationToken,
+            bool isPerfilMode = false)
         {
             if (mappings == null || mappings.Count == 0)
                 throw new InvalidOperationException("Nenhuma cota mapeada para processar.");
@@ -59,8 +61,11 @@ namespace AutoSolid.Services
             ModelDoc2 activeDoc = _swService.GetActivePartDocument();
             if (activeDoc == null)
             {
-                throw new InvalidOperationException("O arquivo de peça (.sldprt) modelo deve estar aberto no SolidWorks.");
+                throw new InvalidOperationException("O arquivo de peça ou perfil (.sldprt / .sldlfp) modelo deve estar aberto no SolidWorks.");
             }
+
+            string fileExtension = isPerfilMode ? ".SLDLFP" : ".SLDPRT";
+            string tipoItem = isPerfilMode ? "Perfil" : "Peça";
 
             var aliasToFullName = new Dictionary<string, string>(StringComparer.OrdinalIgnoreCase);
             foreach (var m in mappings)
@@ -85,7 +90,7 @@ namespace AutoSolid.Services
                     row.StatusMessage = "Alterando cotas...";
 
                     double elapsed = batchStopwatch.Elapsed.TotalSeconds;
-                    double avgPerItem = i > 0 ? elapsed / i : 2.0; // Estimativa inicial de 2.0s na primeira peça
+                    double avgPerItem = i > 0 ? elapsed / i : 2.0;
                     double remaining = Math.Max(0, (total - i) * avgPerItem);
 
                     // Sub-etapa 1: Alterando cotas (25% da peça atual)
@@ -102,7 +107,7 @@ namespace AutoSolid.Services
                         LogEntry = new ProcessingLog
                         {
                             Type = LogType.Info,
-                            Message = $"Iniciando peça: {row.Sku} ({i + 1}/{total})"
+                            Message = $"Iniciando {tipoItem.ToLower()}: {row.Sku} ({i + 1}/{total})"
                         }
                     });
 
@@ -137,7 +142,7 @@ namespace AutoSolid.Services
                     }
 
                     // Sub-etapa 2: Rebuild 3D (60% da peça atual)
-                    row.StatusMessage = "Reconstruindo 3D...";
+                    row.StatusMessage = "Reconstruindo...";
                     elapsed = batchStopwatch.Elapsed.TotalSeconds;
                     remaining = Math.Max(0, (total - (i + 0.5)) * avgPerItem);
 
@@ -147,7 +152,7 @@ namespace AutoSolid.Services
                         TotalCount = total,
                         ExactPercentage = ((i + 0.6) / total) * 100.0,
                         CurrentSku = row.Sku,
-                        StageDetail = $"[2/3] Reconstruindo geometria 3D de '{row.Sku}'...",
+                        StageDetail = $"[2/3] Reconstruindo geometria de '{row.Sku}'...",
                         ElapsedSeconds = elapsed,
                         EstimatedRemainingSeconds = remaining,
                         AverageSecondsPerItem = avgPerItem
@@ -187,9 +192,9 @@ namespace AutoSolid.Services
                         continue;
                     }
 
-                    // Sub-etapa 3: Salvando cópia .SLDPRT (90% -> 100% da peça atual)
-                    row.StatusMessage = "Salvando arquivo...";
-                    string safeFileName = MakeValidFileName(row.Sku) + ".SLDPRT";
+                    // Sub-etapa 3: Salvando cópia com a extensão definida (.SLDPRT ou .SLDLFP)
+                    row.StatusMessage = $"Salvando {fileExtension}...";
+                    string safeFileName = MakeValidFileName(row.Sku) + fileExtension;
                     string destPath = Path.Combine(outputDirectory, safeFileName);
 
                     int saveErrors = 0;
@@ -219,7 +224,7 @@ namespace AutoSolid.Services
                             LogEntry = new ProcessingLog
                             {
                                 Type = LogType.Success,
-                                Message = $"Peça '{safeFileName}' gerada e salva ({avgPerItem:F1}s/peça)."
+                                Message = $"{tipoItem} '{safeFileName}' gerado e salvo ({avgPerItem:F1}s/item)."
                             }
                         });
                     }
@@ -241,7 +246,7 @@ namespace AutoSolid.Services
                             LogEntry = new ProcessingLog
                             {
                                 Type = LogType.Error,
-                                Message = $"Falha ao salvar peça '{safeFileName}'. Código de erro: {saveErrors}"
+                                Message = $"Falha ao salvar {tipoItem.ToLower()} '{safeFileName}'. Código de erro: {saveErrors}"
                             }
                         });
                     }
