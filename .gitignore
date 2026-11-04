@@ -1,0 +1,63 @@
+# ==========================================
+# Segurança e Credenciais (API Keys & Segredos)
+# ==========================================
+# O AutoSolid e AutoMaterial salvam as chaves de API em %APPDATA%\...\settings.json.
+# Caso qualquer arquivo de configuração ou chave seja copiado para o repositório,
+# estas regras garantem que nunca serão enviados ao GitHub.
+settings.json
+**/settings.json
+*.settings.json
+appsettings*.json
+secrets.json
+.env
+.env.*
+*.key
+*.pem
+*.pfx
+*.p12
+*apikey*
+*secret*
+
+# Manter chave de assinatura de assembly COM necessária para compilação local
+!AutoSolid/AutoSolid/AutoSolidKey.snk
+
+# ==========================================
+# Visual Studio / IDE & Sessões Privadas
+# ==========================================
+# Remove rastros locais do desenvolvedor e sessões gravadas de Copilot Chat
+.vs/
+*/.vs/
+*/*.vs/
+**/.vs/
+*.suo
+*.user
+*.userosscache
+*.sln.docstates
+*.vsidx
+*.sqlite
+*.mpack
+copilot-chat/
+**/copilot-chat/
+CopilotSnapshots/
+**/CopilotSnapshots/
+
+# ==========================================
+# Temporários e Logs de Compilação
+# ==========================================
+*.log
+*.tmp
+*.bak
+*.swp
+*.cache
+*.FileListAbsolute.txt
+*.Up2Date
+*.dll.old
+
+# ==========================================
+# Arquivos de Bloqueio do SolidWorks / Windows
+# ==========================================
+~$*
+*~
+thumbs.db
+ehthumbs.db
+Desktop.ini
